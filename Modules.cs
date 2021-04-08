@@ -3,6 +3,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using Discord;
 using Discord.Commands;
+using GoogleApi;
+using GoogleApi.Entities.Search;
+using GoogleApi.Entities.Search.Image.Request;
 
 namespace Stringdicator {
     
@@ -28,6 +31,28 @@ namespace Stringdicator {
         [Command("string")]
         [Summary("Finds a string message")]
         public async Task StringAsync() {
+            //Setup and send search request
+            ImageSearchRequest request = new ImageSearchRequest();
+            request.Query = "Ball of String";
+            request.Key = Environment.GetEnvironmentVariable("API_KEY");
+            request.SearchEngineId = Environment.GetEnvironmentVariable("SEARCH_ENGINE_ID");
+            
+            //Gets the search response - contains info about search
+            BaseSearchResponse response =
+                await GoogleSearch.ImageSearch.QueryAsync(request);
+            
+            //Pick a random search result
+            var items = response.Items.ToArray();
+            Random random = new Random();
+            var item = items[random.Next(0, items.Length)];
+            
+            //Create an embed using that image url
+            EmbedBuilder builder = new EmbedBuilder();
+            builder.WithTitle("String!");
+            builder.WithImageUrl(item.Link);
+
+            //Send messahe
+            await Context.Channel.SendMessageAsync("", false, builder.Build());
         }
     }
 
