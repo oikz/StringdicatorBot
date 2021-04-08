@@ -2,9 +2,35 @@
 using System.IO;
 using System.Threading.Tasks;
 using Discord;
+using Discord.Commands;
+using Discord.WebSocket;
 
 namespace Stringdicator {
     class Stringdicator {
+        private readonly DiscordSocketClient _discordClient;
+        private readonly CommandService _commands;
+
+        private Stringdicator() {
+            _discordClient = new DiscordSocketClient(new DiscordSocketConfig {
+                // How much logging do you want to see?
+                LogLevel = LogSeverity.Info,
+
+                // If you or another service needs to do anything with messages
+                // (eg. checking Reactions, checking the content of edited/deleted messages),
+                // you must set the MessageCacheSize. You may adjust the number as needed.
+                MessageCacheSize = 50,
+            });
+
+            _commands = new CommandService(new CommandServiceConfig {
+                // Again, log level:
+                LogLevel = LogSeverity.Info,
+
+                // There's a few more properties you can set,
+                // for example, case-insensitive commands.
+                CaseSensitiveCommands = false,
+            });
+        }
+
         public static void Main(string[] args)
             => new Stringdicator().MainAsync().GetAwaiter().GetResult();
 
@@ -13,14 +39,21 @@ namespace Stringdicator {
             string root = Directory.GetCurrentDirectory();
             string dotenv = Path.Combine(root, ".env");
             DotEnv.Load(dotenv);
-            var toge = Environment.GetEnvironmentVariable("TOKEN");
-            int hoge = 0;
+            
+            
+            await _discordClient.LoginAsync(TokenType.Bot, Environment.GetEnvironmentVariable("TOKEN"));
+            await _discordClient.StartAsync();
 
-        }
+            CommandService service = new CommandService();
+            CommandHandler handler = new CommandHandler(_discordClient, service);
+            await handler.InstallCommandsAsync();
 
-        private Task Log(LogMessage msg) {
-            Console.WriteLine(msg.ToString());
-            return Task.CompletedTask;
+            // Block this task until the program is closed.
+            _discordClient.Ready += () => {
+                Console.WriteLine("Bot is connected!");
+                return Task.CompletedTask;
+            };
+            await Task.Delay(-1);
         }
     }
 }
