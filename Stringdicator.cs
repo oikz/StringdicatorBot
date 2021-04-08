@@ -43,9 +43,8 @@ namespace Stringdicator {
             
             await _discordClient.LoginAsync(TokenType.Bot, Environment.GetEnvironmentVariable("TOKEN"));
             await _discordClient.StartAsync();
-
-            CommandService service = new CommandService();
-            CommandHandler handler = new CommandHandler(_discordClient, service);
+            
+            CommandHandler handler = new CommandHandler(_discordClient, _commands);
             await handler.InstallCommandsAsync();
 
             // Block this task until the program is closed.

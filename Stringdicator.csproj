@@ -7,7 +7,6 @@
 
     <ItemGroup>
       <PackageReference Include="Discord.Net" Version="2.3.1" />
-      <PackageReference Include="GoogleApi" Version="3.10.7" />
     </ItemGroup>
 
 </Project>
