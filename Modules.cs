@@ -68,7 +68,7 @@ namespace Stringdicator {
             //Setup and send search request
             ImageSearchRequest request = new ImageSearchRequest();
             Random random = new Random(); //Nice
-            request.Options.StartIndex = random.Next(0, 10000);
+            request.Options.StartIndex = random.Next(0, 190); //Max limit may change and result in 400 Bad Request responses
             request.Query = "Ball of String";
             request.Key = Environment.GetEnvironmentVariable("API_KEY");
             request.SearchEngineId = Environment.GetEnvironmentVariable("SEARCH_ENGINE_ID");
@@ -82,12 +82,11 @@ namespace Stringdicator {
                 Console.WriteLine("Error: " + e.Message);
                 return;
             }
-
-            var hoge = response.Queries.Keys;
-            var toge = response.Queries.Values;
+            
             //Pick a random search result
             var items = response.Items.ToArray();
-            var item = items[random.Next(0, items.Length)];
+            var index = random.Next(0, items.Length);
+            var item = items[index];
 
             //Create an embed using that image url
             EmbedBuilder builder = new EmbedBuilder();
@@ -97,7 +96,7 @@ namespace Stringdicator {
 
             //Send message
             await Context.Channel.SendMessageAsync("", false, builder.Build());
-            Console.WriteLine("String! - " + item.Link + " " + response.Query.StartIndex);
+            Console.WriteLine("String! - " + item.Link + " " + (response.Query.StartIndex + index));
         }
     }
 
