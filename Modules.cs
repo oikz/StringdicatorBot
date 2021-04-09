@@ -18,8 +18,9 @@ namespace Stringdicator {
             string echo) {
             //Delete the previous message and then send the requested message afterwards
             var messages = Context.Channel.GetMessagesAsync(1).Flatten();
-            await foreach (var hoge in messages) {
-                await Context.Channel.DeleteMessageAsync(hoge, RequestOptions.Default);
+            await foreach (var message in messages) {
+                await Context.Channel.DeleteMessageAsync(message, RequestOptions.Default);
+                Console.WriteLine(message.Author);
             }
 
             await Context.Channel.SendMessageAsync(echo);
@@ -32,8 +33,9 @@ namespace Stringdicator {
         public async Task StringAsync() {
             //Setup and send search request
             ImageSearchRequest request = new ImageSearchRequest();
+            Random random = new Random();//Nice
             request.Query = "Ball of String";
-            //request.Options.Number = 100; //TODO must be below 10
+            request.Options.LowRange = random.Next(1, 100000);
             request.Key = Environment.GetEnvironmentVariable("API_KEY");
             request.SearchEngineId = Environment.GetEnvironmentVariable("SEARCH_ENGINE_ID");
 
@@ -44,7 +46,6 @@ namespace Stringdicator {
             
             //Pick a random search result
             var items = response.Items.ToArray();
-            Random random = new Random();
             var item = items[random.Next(0, items.Length)];
 
             //Create an embed using that image url
@@ -66,7 +67,6 @@ namespace Stringdicator {
             //Setup and send search request
             ImageSearchRequest request = new ImageSearchRequest();
             request.Query = searchterm;
-            //request.Options.Number = 100; TODO must be below 10
             request.Key = Environment.GetEnvironmentVariable("API_KEY");
             request.SearchEngineId = Environment.GetEnvironmentVariable("SEARCH_ENGINE_ID");
 
