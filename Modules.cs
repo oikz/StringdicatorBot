@@ -10,6 +10,7 @@ using Discord.Commands;
 using GoogleApi;
 using GoogleApi.Entities.Search;
 using GoogleApi.Entities.Search.Common;
+using GoogleApi.Entities.Search.Common.Enums;
 using GoogleApi.Entities.Search.Image.Request;
 
 namespace Stringdicator {
@@ -53,7 +54,7 @@ namespace Stringdicator {
             var messages = Context.Channel.GetMessagesAsync(1).Flatten();
             await foreach (var message in messages) {
                 await Context.Channel.DeleteMessageAsync(message, RequestOptions.Default);
-                Console.WriteLine(message.Author);
+                Console.WriteLine(message.Author + " Said " + message);
             }
 
             await Context.Channel.SendMessageAsync(echo);
@@ -67,16 +68,23 @@ namespace Stringdicator {
             //Setup and send search request
             ImageSearchRequest request = new ImageSearchRequest();
             Random random = new Random(); //Nice
+            request.Options.StartIndex = random.Next(0, 10000);
             request.Query = "Ball of String";
-            request.Options.LowRange = random.Next(1, 100000);
             request.Key = Environment.GetEnvironmentVariable("API_KEY");
             request.SearchEngineId = Environment.GetEnvironmentVariable("SEARCH_ENGINE_ID");
 
             //Gets the search response - contains info about search
-            BaseSearchResponse response =
-                await GoogleSearch.ImageSearch.QueryAsync(request);
+            BaseSearchResponse response;
+            try {
+                response =
+                    await GoogleSearch.ImageSearch.QueryAsync(request);
+            } catch (Exception e) {
+                Console.WriteLine("Error: " + e.Message);
+                return;
+            }
 
-
+            var hoge = response.Queries.Keys;
+            var toge = response.Queries.Values;
             //Pick a random search result
             var items = response.Items.ToArray();
             var item = items[random.Next(0, items.Length)];
@@ -89,7 +97,7 @@ namespace Stringdicator {
 
             //Send message
             await Context.Channel.SendMessageAsync("", false, builder.Build());
-            Console.WriteLine("String! - " + item.Link);
+            Console.WriteLine("String! - " + item.Link + " " + response.Query.StartIndex);
         }
     }
 
@@ -170,7 +178,7 @@ namespace Stringdicator {
     public class TestAudioModule : AudioAssistModule {
         [Command("test",RunMode = RunMode.Async)]
         [Summary("Plays a specified audio file")]
-        public async Task YouLose() {
+        public async Task PlayAudio() {
             await VoiceAsync("audio url");
         }
     }
