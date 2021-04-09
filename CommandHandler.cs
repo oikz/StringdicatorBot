@@ -1,12 +1,19 @@
-﻿using System.Reflection;
+﻿using System;
+using System.IO;
+using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
+using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
+using GoogleApi.Entities.Search.Common;
 
 namespace Stringdicator {
     public class CommandHandler {
         private readonly DiscordSocketClient _discordClient;
         private readonly CommandService _commands;
+        private StreamWriter logFile;
+
 
         // Retrieve client and CommandService instance via ctor
         public CommandHandler(DiscordSocketClient client, CommandService commands) {
@@ -15,8 +22,12 @@ namespace Stringdicator {
         }
 
         public async Task InstallCommandsAsync() {
+            logFile = new StreamWriter("log.txt");
             // Hook the MessageReceived event into our command handler
             _discordClient.MessageReceived += HandleCommandAsync;
+            _discordClient.MessageDeleted += HandleMessageDelete;
+            _discordClient.MessageUpdated += HandleMessageUpdate;
+
 
             // If you do not use Dependency Injection, pass null.
             // See Dependency Injection guide for more information.
@@ -25,6 +36,9 @@ namespace Stringdicator {
             await _discordClient.SetGameAsync("with String!");
         }
 
+        /**
+         * Do stuff with user commands
+         */
         private async Task HandleCommandAsync(SocketMessage messageParam) {
             // Don't process the command if it was a system message
             var message = messageParam as SocketUserMessage;
@@ -48,6 +62,50 @@ namespace Stringdicator {
                 context: context,
                 argPos: startPos,
                 services: null);
+        }
+
+
+        /**
+         * Do stuff when a message is deleted
+         */
+        public Task HandleMessageDelete(Cacheable<IMessage, ulong> cachedMessage, ISocketMessageChannel channel) {
+            // check if the message exists in cache; if not, we cannot report what was removed
+            if (!cachedMessage.HasValue) {
+                return Task.CompletedTask;
+            }
+
+            // Ignore !say deleted messages
+            if (cachedMessage.Value.Content.Contains("!say")) {
+                return Task.CompletedTask;
+            }
+
+
+            var message = cachedMessage.Value;
+            Console.WriteLine(
+                $"Message from {message.Author} was removed from the channel {channel.Name}: \n"
+                + message.Content);
+            logFile.WriteLine(
+                $"Message from {message.Author} was removed from the channel {channel.Name}: \n"
+                + message.Content);
+
+            return Task.CompletedTask;
+        }
+
+        /**
+         * Do stuff when a message is updated
+         */
+        public async Task HandleMessageUpdate(Cacheable<IMessage, ulong> cachedMessage, SocketMessage newMessage,
+            ISocketMessageChannel channel) {
+            // check if the message exists in cache; if not, we cannot report what was removed
+            if (!cachedMessage.HasValue) {
+                return;
+            }
+
+            var message = await cachedMessage.GetOrDownloadAsync();
+            Console.WriteLine(
+                $"Message from {message.Author} in {channel.Name} was edited from {message} -> {newMessage} + \n");
+            await logFile.WriteLineAsync(
+                $"Message from {message.Author} in {channel.Name} was edited from {message} -> {newMessage} + \n");
         }
     }
 }

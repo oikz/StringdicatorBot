@@ -3,3 +3,4 @@
 /obj/
 /libsodium.dll
 /opus.dll
+ExtraModules.cs
