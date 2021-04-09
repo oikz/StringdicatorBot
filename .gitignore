@@ -1,3 +1,5 @@
 .env
 /bin/
 /obj/
+/libsodium.dll
+/opus.dll

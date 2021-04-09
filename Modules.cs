@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using Discord;
+using Discord.Audio;
 using Discord.Commands;
 using GoogleApi;
 using GoogleApi.Entities.Search;
@@ -15,12 +17,11 @@ namespace Stringdicator {
         [Command("Stringdicator")]
         [Summary("Outputs all commands")]
         public async Task HelpAsync() {
-            
             //Kinda jank but gets all the commands again
             CommandService _commands = new CommandService();
             await _commands.AddModulesAsync(assembly: Assembly.GetEntryAssembly(),
                 services: null);
-            
+
             //Embed builder
             EmbedBuilder builder = new EmbedBuilder();
             builder.WithTitle("All Stringdicator Commands");
@@ -35,6 +36,7 @@ namespace Stringdicator {
                 fieldBuilder.Value = command.Summary;
                 builder.AddField(fieldBuilder);
             }
+
             await ReplyAsync("", false, builder.Build());
         }
     }
@@ -121,4 +123,56 @@ namespace Stringdicator {
             Console.WriteLine("Stringsearch! - " + searchterm + " " + item.Link);
         }
     }
+
+    
+    /**
+     * Base class that holds the audio stuffs
+     */
+    public class AudioAssistModule : ModuleBase<SocketCommandContext> {
+        private Process CreateStream(string path) {
+            return Process.Start(new ProcessStartInfo {
+                FileName = "ffmpeg",
+                Arguments = $"-hide_banner -loglevel panic -i \"{path}\" -ac 2 -f s16le -ar 48000 pipe:1",
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+            });
+        }
+
+        /**
+         * Joins the users channel and plays the specified url, then disconnects
+         */
+        public async Task VoiceAsync(string url) {
+            if (Context.User.IsBot) {
+                return;
+            }
+
+            var channel = (Context.User as IGuildUser).VoiceChannel;
+            if (channel == null) {
+                await ReplyAsync("User not in a voice channel");
+                return;
+            }
+
+            var audioClient = await channel.ConnectAsync();
+
+            var ffmpeg = CreateStream(url);
+            var output = ffmpeg.StandardOutput.BaseStream;
+            var discord = audioClient.CreatePCMStream(AudioApplication.Mixed); {
+                try {
+                    await output.CopyToAsync(discord);
+                } finally {
+                    await discord.FlushAsync();
+                    await channel.DisconnectAsync();
+                }
+            }
+        }
+    }
+
+    public class TestAudioModule : AudioAssistModule {
+        [Command("test",RunMode = RunMode.Async)]
+        [Summary("Plays a specified audio file")]
+        public async Task YouLose() {
+            await VoiceAsync("audio url");
+        }
+    }
+
 }
