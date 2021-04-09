@@ -49,7 +49,7 @@ namespace Stringdicator {
 
             // Block this task until the program is closed.
             _discordClient.Ready += () => {
-                Console.WriteLine("Bot is connected!");
+                Console.WriteLine("Stringdicator is connected!");
                 return Task.CompletedTask;
             };
             await Task.Delay(-1);

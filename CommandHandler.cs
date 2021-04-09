@@ -22,6 +22,7 @@ namespace Stringdicator {
             // See Dependency Injection guide for more information.
             await _commands.AddModulesAsync(assembly: Assembly.GetEntryAssembly(),
                 services: null);
+            await _discordClient.SetGameAsync("with String!");
         }
 
         private async Task HandleCommandAsync(SocketMessage messageParam) {
