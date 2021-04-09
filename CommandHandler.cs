@@ -85,7 +85,7 @@ namespace Stringdicator {
                 $"Message from {message.Author} was removed from the channel {channel.Name}: \n"
                 + message.Content);
             logFile.WriteLine(
-                $"Message from {message.Author} was removed from the channel {channel.Name}: \n"
+                $"{DateTime.Now}: Message from {message.Author} was removed from the channel {channel.Name}: \n"
                 + message.Content);
 
             return Task.CompletedTask;
@@ -103,9 +103,9 @@ namespace Stringdicator {
 
             var message = await cachedMessage.GetOrDownloadAsync();
             Console.WriteLine(
-                $"Message from {message.Author} in {channel.Name} was edited from {message} -> {newMessage} + \n");
+                $"Message from {message.Author} in {channel.Name} was edited from {message} -> {newMessage}");
             await logFile.WriteLineAsync(
-                $"Message from {message.Author} in {channel.Name} was edited from {message} -> {newMessage} + \n");
+                $"{DateTime.Now}: Message from {message.Author} in {channel.Name} was edited from {message} -> {newMessage}");
         }
     }
 }
