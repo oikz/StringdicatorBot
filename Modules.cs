@@ -8,7 +8,6 @@ using Discord.Audio;
 using Discord.Commands;
 using GoogleApi;
 using GoogleApi.Entities.Search;
-using GoogleApi.Entities.Search.Common;
 using GoogleApi.Entities.Search.Image.Request;
 
 namespace Stringdicator {

@@ -1,12 +1,10 @@
 ﻿using System;
 using System.IO;
-using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
-using GoogleApi.Entities.Search.Common;
 
 namespace Stringdicator {
     public class CommandHandler {
@@ -100,8 +98,14 @@ namespace Stringdicator {
             if (!cachedMessage.HasValue) {
                 return;
             }
-
+            
             var message = await cachedMessage.GetOrDownloadAsync();
+            
+            //Don't show stuff edited by bot - Embeds etc
+            if (message.Author == _discordClient.CurrentUser) {
+                return;
+            }
+            
             Console.WriteLine(
                 $"Message from {message.Author} in {channel.Name} was edited from {message} -> {newMessage}");
             await logFile.WriteLineAsync(
