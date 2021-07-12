@@ -4,3 +4,5 @@
 /libsodium.dll
 /opus.dll
 ExtraModules.cs
+/.vs/Stringdicator
+/Backup

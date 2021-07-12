@@ -42,6 +42,26 @@ namespace Stringdicator {
             var message = messageParam as SocketUserMessage;
             if (message == null) return;
 
+            //For automatically detecting the image type and responding
+            var attachments = message.Attachments;
+            foreach (var attachment in attachments) {
+                if (attachment == null) {
+                    continue;
+                }
+                var extension = Path.GetExtension(attachment.Url);
+                switch (extension) {
+                    case null:
+                        continue;
+                    case ".jpg":
+                    case ".png":
+                        //Valid image
+                        
+                        Console.WriteLine(attachment.Url);
+                        break;
+                }
+            }
+            
+            
             // Create a number to track where the prefix ends and the command begins
             int startPos = 0;
 
