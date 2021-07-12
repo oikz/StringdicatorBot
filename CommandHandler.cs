@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Net;
 using System.Reflection;
 using System.Threading.Tasks;
 using Discord;
@@ -48,6 +49,7 @@ namespace Stringdicator {
                 if (attachment == null) {
                     continue;
                 }
+
                 var extension = Path.GetExtension(attachment.Url);
                 switch (extension) {
                     case null:
@@ -56,12 +58,29 @@ namespace Stringdicator {
                     case ".png":
                         //Valid image
                         
-                        Console.WriteLine(attachment.Url);
+                        var current = Directory.GetCurrentDirectory();
+                        var filename = current + "\\image" + extension;
+                        
+                        //Download the image to access locally
+                        using (var client = new WebClient()) {
+                            client.DownloadFile(new Uri(attachment.Url), filename);
+                        }
+                        
+                        // Create single instance of sample data from first line of dataset for model input
+                        MLModel1.ModelInput sampleData = new MLModel1.ModelInput() {
+                            ImageSource = filename,
+                        };
+
+                        // Make a single prediction on the sample data and print results
+                        var predictionResult = MLModel1.Predict(sampleData);
+
+                        Console.WriteLine($"Predicted Label value {predictionResult.Prediction}");
+                        GC.Collect();
                         break;
                 }
             }
-            
-            
+
+
             // Create a number to track where the prefix ends and the command begins
             int startPos = 0;
 
