@@ -64,8 +64,8 @@ namespace Stringdicator {
 
 
         /**
-         * Do stuff when a message is deleted
-         */
+             * Do stuff when a message is deleted
+             */
         public Task HandleMessageDelete(Cacheable<IMessage, ulong> cachedMessage, ISocketMessageChannel channel) {
             // check if the message exists in cache; if not, we cannot report what was removed
             if (!cachedMessage.HasValue) {
@@ -90,22 +90,23 @@ namespace Stringdicator {
         }
 
         /**
-         * Do stuff when a message is updated
-         */
+             * Do stuff when a message is updated
+             */
         public async Task HandleMessageUpdate(Cacheable<IMessage, ulong> cachedMessage, SocketMessage newMessage,
             ISocketMessageChannel channel) {
             // check if the message exists in cache; if not, we cannot report what was removed
             if (!cachedMessage.HasValue) {
                 return;
             }
-            
+
             var message = await cachedMessage.GetOrDownloadAsync();
-            
+
+
             //Don't show stuff edited by bot - Embeds etc
-            if (message.Author == _discordClient.CurrentUser) {
+            if (message.Author.Username.Equals(_discordClient.CurrentUser.Username)) {
                 return;
             }
-            
+
             Console.WriteLine(
                 $"Message from {message.Author} in {channel.Name} was edited from {message} -> {newMessage}");
             await logFile.WriteLineAsync(

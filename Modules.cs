@@ -65,7 +65,8 @@ namespace Stringdicator {
             //Setup and send search request
             ImageSearchRequest request = new ImageSearchRequest();
             Random random = new Random(); //Nice
-            request.Options.StartIndex = random.Next(0, 190); //Max limit may change and result in 400 Bad Request responses
+            request.Options.StartIndex =
+                random.Next(0, 190); //Max limit may change and result in 400 Bad Request responses
             request.Query = "Ball of String";
             request.Key = Environment.GetEnvironmentVariable("API_KEY");
             request.SearchEngineId = Environment.GetEnvironmentVariable("SEARCH_ENGINE_ID");
@@ -79,7 +80,7 @@ namespace Stringdicator {
                 Console.WriteLine("Error: " + e.Message);
                 return;
             }
-            
+
             //Pick a random search result
             var items = response.Items.ToArray();
             var index = random.Next(0, items.Length);
@@ -128,7 +129,7 @@ namespace Stringdicator {
         }
     }
 
-    
+
     /**
      * Base class that holds the audio stuffs
      */
@@ -160,19 +161,18 @@ namespace Stringdicator {
 
             var ffmpeg = CreateStream(url);
             var output = ffmpeg.StandardOutput.BaseStream;
-            var discord = audioClient.CreatePCMStream(AudioApplication.Mixed); {
-                try {
-                    await output.CopyToAsync(discord);
-                } finally {
-                    await discord.FlushAsync();
-                    await channel.DisconnectAsync();
-                }
+            var discord = audioClient.CreatePCMStream(AudioApplication.Mixed);
+            try {
+                await output.CopyToAsync(discord);
+            } finally {
+                await discord.FlushAsync();
+                await channel.DisconnectAsync();
             }
         }
     }
 
     public class TestAudioModule : AudioAssistModule {
-        [Command("test",RunMode = RunMode.Async)]
+        [Command("test", RunMode = RunMode.Async)]
         [Summary("Plays a specified audio file")]
         public async Task PlayAudio() {
             await VoiceAsync("audio url");
