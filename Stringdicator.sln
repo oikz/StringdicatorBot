@@ -1,6 +1,9 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Stringdicator", "Stringdicator.csproj", "{45A3FF1D-2CFA-4304-8AA7-D99F6920A027}"
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.31424.327
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Stringdicator", "Stringdicator.csproj", "{45A3FF1D-2CFA-4304-8AA7-D99F6920A027}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -12,5 +15,11 @@ Global
 		{45A3FF1D-2CFA-4304-8AA7-D99F6920A027}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{45A3FF1D-2CFA-4304-8AA7-D99F6920A027}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{45A3FF1D-2CFA-4304-8AA7-D99F6920A027}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {408594A0-7827-4A58-8130-3F60B285F3A5}
 	EndGlobalSection
 EndGlobal

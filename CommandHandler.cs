@@ -1,5 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Net;
+using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Reflection;
 using System.Threading.Tasks;
 using Discord;
@@ -39,8 +44,36 @@ namespace Stringdicator {
          */
         private async Task HandleCommandAsync(SocketMessage messageParam) {
             // Don't process the command if it was a system message
-            var message = messageParam as SocketUserMessage;
-            if (message == null) return;
+            if (!(messageParam is SocketUserMessage message)) return;
+
+            //For automatically detecting the image type and responding
+            var attachments = message.Attachments;
+            foreach (var attachment in attachments) {
+                if (attachment == null) {
+                    continue;
+                }
+
+                var extension = Path.GetExtension(attachment.Url);
+                switch (extension) {
+                    case null:
+                        continue;
+                    case ".jpg":
+                    case ".png":
+                        //Valid image
+
+                        var current = Directory.GetCurrentDirectory();
+                        var filename = current + "\\image" + extension;
+
+                        using (var client = new WebClient()) {
+                            client.DownloadFile(new Uri(attachment.Url), filename);
+                        }
+
+                        MakePredictionRequest(filename, messageParam).Wait();
+                        GC.Collect(); //To prevent "file already in use" type errors
+                        break;
+                }
+            }
+
 
             // Create a number to track where the prefix ends and the command begins
             int startPos = 0;
@@ -64,8 +97,8 @@ namespace Stringdicator {
 
 
         /**
-             * Do stuff when a message is deleted
-             */
+         * Do stuff when a message is deleted
+         */
         public Task HandleMessageDelete(Cacheable<IMessage, ulong> cachedMessage, ISocketMessageChannel channel) {
             // check if the message exists in cache; if not, we cannot report what was removed
             if (!cachedMessage.HasValue) {
@@ -90,8 +123,8 @@ namespace Stringdicator {
         }
 
         /**
-             * Do stuff when a message is updated
-             */
+         * Do stuff when a message is updated
+         */
         public async Task HandleMessageUpdate(Cacheable<IMessage, ulong> cachedMessage, SocketMessage newMessage,
             ISocketMessageChannel channel) {
             // check if the message exists in cache; if not, we cannot report what was removed
@@ -112,5 +145,65 @@ namespace Stringdicator {
             await logFile.WriteLineAsync(
                 $"{DateTime.Now}: Message from {message.Author} in {channel.Name} was edited from {message} -> {newMessage}");
         }
+        
+        /**
+         * Handles the prediction of image classification when a user uploads an image
+         * Mostly taken from the Microsoft Docs for Custom Vision
+         */
+        private async Task MakePredictionRequest(string imageFilePath, SocketMessage messageParam) {
+            var client = new HttpClient();
+            
+            client.DefaultRequestHeaders.Add("Prediction-Key", "323fbb7c35b34af48005a8563b95333d");
+
+            // Prediction URL - replace this example URL with your valid Prediction URL.
+            const string url =
+                "https://string.cognitiveservices.azure.com/customvision/v3.0/Prediction/f598b65b-19f1-48fa-a15b-097704cc5e76/classify/iterations/String%202/image";
+
+            // Request body. Try this sample with a locally stored image.
+            var byteData = GetImageAsByteArray(imageFilePath);
+
+            using var content = new ByteArrayContent(byteData);
+            content.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
+            var response = await client.PostAsync(url, content);
+
+            var resultString = await response.Content.ReadAsStringAsync();
+            
+            
+            //Take the response from Custom Vision and get the probability of each tag for the provided image
+            //Lots of string splits to get it :/
+            resultString = resultString.Split('[')[1];
+            var tags = resultString.Split("},{");
+
+            var probabilities = new Dictionary<double, string>();
+            foreach (var tag in tags) {
+                var probability = tag.Split( ":")[1].Split(",")[0];//Extract the probability via regex
+                probabilities.Add(double.Parse(probability), tag.Split("\"")[9]);
+            }
+            
+            //Output heighest guess
+            var pair = new KeyValuePair<double, string>(0, "");
+            foreach (var current in probabilities.Where(result => result.Key > pair.Key)) {
+                pair = current;
+                Console.WriteLine(current);
+            }
+            
+            if (pair.Value.Equals("String") && pair.Key > 0.8) {
+                var context = new SocketCommandContext(_discordClient, messageParam as SocketUserMessage);
+                await context.Channel.SendMessageAsync("String!");
+            }
+        }
+
+        
+        /**
+         * Also taken from Microsoft Docs
+         * Takes the image into a byte array for sending to Custom Vision for prediction
+         */
+        private static byte[] GetImageAsByteArray(string imageFilePath) {
+            var fileStream = new FileStream(imageFilePath, FileMode.Open, FileAccess.Read);
+            var binaryReader = new BinaryReader(fileStream);
+            return binaryReader.ReadBytes((int) fileStream.Length);
+        }
+
+
     }
 }

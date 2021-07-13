@@ -4,3 +4,6 @@
 /libsodium.dll
 /opus.dll
 ExtraModules.cs
+/.vs/Stringdicator
+/Backup
+MLModel1.mbconfig
