@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
@@ -126,6 +127,9 @@ namespace Stringdicator {
             //Send message
             await Context.Channel.SendMessageAsync("", false, builder.Build());
             Console.WriteLine("Stringsearch! - " + searchterm + " " + item.Link);
+            //Attachment a = new Attachment;
+            CommandHandler.MakePrediction(Path.GetExtension(item.Link), item.Link, Context);
+            //Call the prediction method
         }
     }
 

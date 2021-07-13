@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -46,6 +47,9 @@ namespace Stringdicator {
             // Don't process the command if it was a system message
             if (!(messageParam is SocketUserMessage message)) return;
 
+            // Create a WebSocket-based command context based on the message
+            SocketCommandContext context = new SocketCommandContext(_discordClient, message);
+
             //For automatically detecting the image type and responding
             var attachments = message.Attachments;
             foreach (var attachment in attachments) {
@@ -54,24 +58,8 @@ namespace Stringdicator {
                 }
 
                 var extension = Path.GetExtension(attachment.Url);
-                switch (extension) {
-                    case null:
-                        continue;
-                    case ".jpg":
-                    case ".png":
-                        //Valid image
 
-                        var current = Directory.GetCurrentDirectory();
-                        var filename = current + "\\image" + extension;
-
-                        using (var client = new WebClient()) {
-                            client.DownloadFile(new Uri(attachment.Url), filename);
-                        }
-
-                        MakePredictionRequest(filename, messageParam).Wait();
-                        GC.Collect(); //To prevent "file already in use" type errors
-                        break;
-                }
+                MakePrediction(extension, attachment.Url, context);
             }
 
 
@@ -83,9 +71,6 @@ namespace Stringdicator {
                   message.HasMentionPrefix(_discordClient.CurrentUser, ref startPos)) ||
                 message.Author.IsBot)
                 return;
-
-            // Create a WebSocket-based command context based on the message
-            SocketCommandContext context = new SocketCommandContext(_discordClient, message);
 
             // Execute the command with the command context we just
             // created, along with the service provider for precondition checks.
@@ -145,17 +130,45 @@ namespace Stringdicator {
             await logFile.WriteLineAsync(
                 $"{DateTime.Now}: Message from {message.Author} in {channel.Name} was edited from {message} -> {newMessage}");
         }
-        
+
+        /**
+         * Make a predction
+         * Take a given file url/attachment and set it up for Custom Vision prediction
+         */
+        public static void MakePrediction(string extension, string attachmentUrl, SocketCommandContext context) {
+            if (!extension.Equals(".gif") && !extension.Equals(".jpg") && !extension.Equals(".png")) {
+                return;
+            }
+
+            var current = Directory.GetCurrentDirectory();
+            var filename = current + "\\image" + extension;
+
+            using (var client = new WebClient()) {
+                client.DownloadFile(new Uri(attachmentUrl), filename);
+            }
+
+            //Need to load first frame as a jpg/png
+            if (extension.Equals(".gif")) {
+                System.Drawing.Image gifImg = System.Drawing.Image.FromFile(filename);
+                Bitmap bmp = new Bitmap(gifImg);
+                filename = filename.Replace(".gif", ".png");
+                bmp.Save(filename);
+            }
+
+
+            MakePredictionRequest(filename, context).Wait();
+            GC.Collect(); //To prevent "file already in use" type errors
+        }
+
         /**
          * Handles the prediction of image classification when a user uploads an image
          * Mostly taken from the Microsoft Docs for Custom Vision
          */
-        private async Task MakePredictionRequest(string imageFilePath, SocketMessage messageParam) {
+        private static async Task MakePredictionRequest(string imageFilePath, SocketCommandContext context) {
             var client = new HttpClient();
-            
+
             client.DefaultRequestHeaders.Add("Prediction-Key", "323fbb7c35b34af48005a8563b95333d");
 
-            // Prediction URL - replace this example URL with your valid Prediction URL.
             const string url =
                 "https://string.cognitiveservices.azure.com/customvision/v3.0/Prediction/f598b65b-19f1-48fa-a15b-097704cc5e76/classify/iterations/String%202/image";
 
@@ -167,8 +180,8 @@ namespace Stringdicator {
             var response = await client.PostAsync(url, content);
 
             var resultString = await response.Content.ReadAsStringAsync();
-            
-            
+
+
             //Take the response from Custom Vision and get the probability of each tag for the provided image
             //Lots of string splits to get it :/
             resultString = resultString.Split('[')[1];
@@ -176,24 +189,23 @@ namespace Stringdicator {
 
             var probabilities = new Dictionary<double, string>();
             foreach (var tag in tags) {
-                var probability = tag.Split( ":")[1].Split(",")[0];//Extract the probability via regex
+                var probability = tag.Split(":")[1].Split(",")[0]; //Extract the probability via regex
                 probabilities.Add(double.Parse(probability), tag.Split("\"")[9]);
             }
-            
-            //Output heighest guess
+
+            //Output highest guess
             var pair = new KeyValuePair<double, string>(0, "");
             foreach (var current in probabilities.Where(result => result.Key > pair.Key)) {
                 pair = current;
                 Console.WriteLine(current);
             }
-            
+
             if (pair.Value.Equals("String") && pair.Key > 0.8) {
-                var context = new SocketCommandContext(_discordClient, messageParam as SocketUserMessage);
-                await context.Channel.SendMessageAsync("String!");
+                Console.WriteLine("String detected!");
             }
         }
 
-        
+
         /**
          * Also taken from Microsoft Docs
          * Takes the image into a byte array for sending to Custom Vision for prediction
@@ -203,7 +215,5 @@ namespace Stringdicator {
             var binaryReader = new BinaryReader(fileStream);
             return binaryReader.ReadBytes((int) fileStream.Length);
         }
-
-
     }
 }
