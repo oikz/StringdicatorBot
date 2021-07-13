@@ -45,8 +45,7 @@ namespace Stringdicator {
          */
         private async Task HandleCommandAsync(SocketMessage messageParam) {
             // Don't process the command if it was a system message
-            var message = messageParam as SocketUserMessage;
-            if (message == null) return;
+            if (!(messageParam is SocketUserMessage message)) return;
 
             //For automatically detecting the image type and responding
             var attachments = message.Attachments;
@@ -70,7 +69,8 @@ namespace Stringdicator {
                             client.DownloadFile(new Uri(attachment.Url), filename);
                         }
 
-                        MakePredictionRequest(filename).Wait();
+                        MakePredictionRequest(filename, messageParam).Wait();
+                        GC.Collect(); //To prevent "file already in use" type errors
                         break;
                 }
             }
@@ -151,7 +151,7 @@ namespace Stringdicator {
          * Handles the prediction of image classification when a user uploads an image
          * Mostly taken from the Microsoft Docs for Custom Vision
          */
-        public static async Task MakePredictionRequest(string imageFilePath) {
+        private async Task MakePredictionRequest(string imageFilePath, SocketMessage messageParam) {
             var client = new HttpClient();
             
             client.DefaultRequestHeaders.Add("Prediction-Key", "323fbb7c35b34af48005a8563b95333d");
@@ -185,9 +185,13 @@ namespace Stringdicator {
             var pair = new KeyValuePair<double, string>(0, "");
             foreach (var current in probabilities.Where(result => result.Key > pair.Key)) {
                 pair = current;
+                Console.WriteLine(current);
             }
-
-            Console.WriteLine(pair);
+            
+            if (pair.Value.Equals("String") && pair.Key > 0.8) {
+                var context = new SocketCommandContext(_discordClient, messageParam as SocketUserMessage);
+                await context.Channel.SendMessageAsync("String!");
+            }
         }
 
         
