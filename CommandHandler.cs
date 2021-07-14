@@ -48,23 +48,30 @@ namespace Stringdicator {
             if (!(messageParam is SocketUserMessage message)) return;
 
             // Create a WebSocket-based command context based on the message
-            SocketCommandContext context = new SocketCommandContext(_discordClient, message);
+            var context = new SocketCommandContext(_discordClient, message);
 
-            //For automatically detecting the image type and responding
+
+            //Check each attachment posted by the user and if its an image (checked inside MakePrediction(), do a prediction
             var attachments = message.Attachments;
             foreach (var attachment in attachments) {
                 if (attachment == null) {
                     continue;
                 }
 
-                var extension = Path.GetExtension(attachment.Url);
+                MakePrediction(attachment.Url, context);
+                GC.Collect(); //To fix file in use errors
+                return;
+            }
 
-                MakePrediction(extension, attachment.Url, context);
+            if (message.Content.StartsWith("https://tenor.com")) {
+                MakePrediction(message.Content + ".gif", context);
+                GC.Collect();
+                return;
             }
 
 
             // Create a number to track where the prefix ends and the command begins
-            int startPos = 0;
+            var startPos = 0;
 
             // Determine if the message is a command based on the prefix and make sure no bots trigger commands
             if (!(message.HasCharPrefix('!', ref startPos) ||
@@ -84,7 +91,7 @@ namespace Stringdicator {
         /**
          * Do stuff when a message is deleted
          */
-        public Task HandleMessageDelete(Cacheable<IMessage, ulong> cachedMessage, ISocketMessageChannel channel) {
+        private Task HandleMessageDelete(Cacheable<IMessage, ulong> cachedMessage, ISocketMessageChannel channel) {
             // check if the message exists in cache; if not, we cannot report what was removed
             if (!cachedMessage.HasValue) {
                 return Task.CompletedTask;
@@ -110,7 +117,7 @@ namespace Stringdicator {
         /**
          * Do stuff when a message is updated
          */
-        public async Task HandleMessageUpdate(Cacheable<IMessage, ulong> cachedMessage, SocketMessage newMessage,
+        private async Task HandleMessageUpdate(Cacheable<IMessage, ulong> cachedMessage, SocketMessage newMessage,
             ISocketMessageChannel channel) {
             // check if the message exists in cache; if not, we cannot report what was removed
             if (!cachedMessage.HasValue) {
@@ -132,10 +139,11 @@ namespace Stringdicator {
         }
 
         /**
-         * Make a predction
+         * Handles setup for the image classification prediction 
          * Take a given file url/attachment and set it up for Custom Vision prediction
          */
-        public static void MakePrediction(string extension, string attachmentUrl, SocketCommandContext context) {
+        public static void MakePrediction(string attachmentUrl, SocketCommandContext context) {
+            var extension = Path.GetExtension(attachmentUrl); //Get the extension for use later
             if (!extension.Equals(".gif") && !extension.Equals(".jpg") && !extension.Equals(".png")) {
                 return;
             }
@@ -143,21 +151,21 @@ namespace Stringdicator {
             var current = Directory.GetCurrentDirectory();
             var filename = current + "\\image" + extension;
 
+            //Download the image for easier stuff
             using (var client = new WebClient()) {
                 client.DownloadFile(new Uri(attachmentUrl), filename);
             }
 
-            //Need to load first frame as a jpg/png
+            //Need to load first frame as a png if its a gif
+            //Get the first frame and save it as a png in the same format
             if (extension.Equals(".gif")) {
-                System.Drawing.Image gifImg = System.Drawing.Image.FromFile(filename);
-                Bitmap bmp = new Bitmap(gifImg);
+                var gifImg = System.Drawing.Image.FromFile(filename);
+                var bmp = new Bitmap(gifImg);
                 filename = filename.Replace(".gif", ".png");
                 bmp.Save(filename);
             }
-
-
+            
             MakePredictionRequest(filename, context).Wait();
-            GC.Collect(); //To prevent "file already in use" type errors
         }
 
         /**
@@ -169,16 +177,17 @@ namespace Stringdicator {
 
             client.DefaultRequestHeaders.Add("Prediction-Key", "323fbb7c35b34af48005a8563b95333d");
 
+            //Prediction endpoint
             const string url =
                 "https://string.cognitiveservices.azure.com/customvision/v3.0/Prediction/f598b65b-19f1-48fa-a15b-097704cc5e76/classify/iterations/String%202/image";
 
-            // Request body. Try this sample with a locally stored image.
+            // Sends the image as a byte array to the endpoint to run a prediction on it
             var byteData = GetImageAsByteArray(imageFilePath);
-
             using var content = new ByteArrayContent(byteData);
             content.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
             var response = await client.PostAsync(url, content);
 
+            //Result
             var resultString = await response.Content.ReadAsStringAsync();
 
 
@@ -187,6 +196,7 @@ namespace Stringdicator {
             resultString = resultString.Split('[')[1];
             var tags = resultString.Split("},{");
 
+            //Sort tag prediction probabilities into a dictionary
             var probabilities = new Dictionary<double, string>();
             foreach (var tag in tags) {
                 var probability = tag.Split(":")[1].Split(",")[0]; //Extract the probability via regex
@@ -197,8 +207,8 @@ namespace Stringdicator {
             var pair = new KeyValuePair<double, string>(0, "");
             foreach (var current in probabilities.Where(result => result.Key > pair.Key)) {
                 pair = current;
-                Console.WriteLine(current);
             }
+            Console.WriteLine(pair);
 
             if (pair.Value.Equals("String") && pair.Key > 0.8) {
                 Console.WriteLine("String detected!");

@@ -104,22 +104,22 @@ namespace Stringdicator {
         [Summary("Finds a searched image")]
         public async Task StringAsync([Remainder] string searchterm) {
             //Setup and send search request
-            ImageSearchRequest request = new ImageSearchRequest();
+            var request = new ImageSearchRequest();
             request.Query = searchterm;
             request.Key = Environment.GetEnvironmentVariable("API_KEY");
             request.SearchEngineId = Environment.GetEnvironmentVariable("SEARCH_ENGINE_ID");
 
             //Gets the search response - contains info about search
-            BaseSearchResponse response =
+            var response =
                 await GoogleSearch.ImageSearch.QueryAsync(request);
 
             //Pick a random search result
             var items = response.Items.ToArray();
-            Random random = new Random();
+            var random = new Random();
             var item = items[random.Next(0, items.Length)];
 
             //Create an embed using that image url
-            EmbedBuilder builder = new EmbedBuilder();
+            var builder = new EmbedBuilder();
             builder.WithTitle("Stringsearch!");
             builder.WithImageUrl(item.Link);
             builder.WithColor(3447003);
@@ -127,8 +127,10 @@ namespace Stringdicator {
             //Send message
             await Context.Channel.SendMessageAsync("", false, builder.Build());
             Console.WriteLine("Stringsearch! - " + searchterm + " " + item.Link);
-            //Attachment a = new Attachment;
-            CommandHandler.MakePrediction(Path.GetExtension(item.Link), item.Link, Context);
+            
+            //Do an image classification prediction for stringsearch images as well
+            CommandHandler.MakePrediction(item.Link, Context);
+            GC.Collect();
             //Call the prediction method
         }
     }
