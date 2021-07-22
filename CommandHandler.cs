@@ -143,8 +143,18 @@ namespace Stringdicator {
          * Take a given file url/attachment and set it up for Custom Vision prediction
          */
         public static void MakePrediction(string attachmentUrl, SocketCommandContext context) {
+            //Trim the end of urls as some can contain extra characters after the filename
+            attachmentUrl = attachmentUrl switch {
+                var a when a.Contains(".jpg") => attachmentUrl.Split(".jpg")[0] + ".jpg",
+                var a when a.Contains(".png") => attachmentUrl.Split(".png")[0] + ".png",
+                var a when a.Contains(".jpeg") => attachmentUrl.Split(".jpeg")[0] + ".jpeg",
+                var a when a.Contains(".gif") => attachmentUrl.Split(".gif")[0] + ".gif",
+                _ => attachmentUrl
+            };
+
             var extension = Path.GetExtension(attachmentUrl); //Get the extension for use later
-            if (!extension.Equals(".gif") && !extension.Equals(".jpg") && !extension.Equals(".png")) {
+            if (!extension.Equals(".gif") && !extension.Equals(".jpg") && !extension.Equals(".png") &&
+                !extension.Equals("jpeg")) {
                 return;
             }
 

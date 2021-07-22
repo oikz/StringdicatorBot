@@ -41,23 +41,6 @@ namespace Stringdicator {
     }
 
 
-    //Take the users message, delete it and then replace it with Stringdicators own message of the same content
-    public class SayModule : ModuleBase<SocketCommandContext> {
-        // !say hello world -> hello world
-        [Command("Say")]
-        [Summary("Deletes and then echoes a message.")]
-        public async Task SayAsync([Remainder] [Summary("The text to echo")]
-            string echo) {
-            //Delete the previous message and then send the requested message afterwards
-            var messages = Context.Channel.GetMessagesAsync(1).Flatten();
-            await foreach (var message in messages) {
-                await Context.Channel.DeleteMessageAsync(message, RequestOptions.Default);
-                Console.WriteLine(message.Author + " Said " + message);
-            }
-
-            await Context.Channel.SendMessageAsync(echo);
-        }
-    }
 
     public class StringModule : ModuleBase<SocketCommandContext> {
         [Command("String")]
