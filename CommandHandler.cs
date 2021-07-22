@@ -189,7 +189,7 @@ namespace Stringdicator {
 
             //Prediction endpoint
             const string url =
-                "https://string.cognitiveservices.azure.com/customvision/v3.0/Prediction/f598b65b-19f1-48fa-a15b-097704cc5e76/classify/iterations/String%202/image";
+                "https://string2.cognitiveservices.azure.com/customvision/v3.0/Prediction/f598b65b-19f1-48fa-a15b-097704cc5e76/classify/iterations/String/image";
 
             // Sends the image as a byte array to the endpoint to run a prediction on it
             var byteData = GetImageAsByteArray(imageFilePath);
