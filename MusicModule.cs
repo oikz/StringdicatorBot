@@ -41,7 +41,7 @@ namespace Stringdicator {
 
             await args.Player.PlayAsync(track);
             await args.Player.TextChannel.SendMessageAsync(
-                "Now playing: {track.Title}");
+                "Now playing: " + track.Title);
         }
 
 
@@ -198,6 +198,17 @@ namespace Stringdicator {
         }
 
         /**
+         * Show the song currently playing
+         */
+        [Command("StringSong")]
+        [Summary("Show the currently playing song")]
+        private async Task CurrentSongAsync() {
+            var player = _lavaNode.GetPlayer(Context.Guild);
+            await EmbedText(player.Track.Title, true, player.Track.Position.ToString(@"hh\:mm\:ss") + " / " + player.Track.Duration,
+                player.Track.FetchArtworkAsync().Result);
+        }
+
+        /**
          * Display the current queue
          */
         [Command("StringQueue")]
@@ -213,7 +224,7 @@ namespace Stringdicator {
 
             for (var i = 0; i < player.Queue.Count; i++) {
                 var lavaTrack = player.Queue.ElementAt(i);
-                var fieldBuilder = new EmbedFieldBuilder {Name = lavaTrack.Title, Value = "Test"};
+                var fieldBuilder = new EmbedFieldBuilder {Name = lavaTrack.Title, Value = lavaTrack.Duration};
                 builder.AddField(fieldBuilder);
             }
 
