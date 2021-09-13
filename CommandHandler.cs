@@ -11,32 +11,38 @@ using System.Threading.Tasks;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
+using Microsoft.Extensions.DependencyInjection;
+using Victoria;
 
 namespace Stringdicator {
     public class CommandHandler {
         private readonly DiscordSocketClient _discordClient;
         private readonly CommandService _commands;
-        private StreamWriter logFile;
+        private StreamWriter _logFile;
+        private readonly ServiceProvider _services;
+        private LavaNode _lavaNode;
 
 
         // Retrieve client and CommandService instance via ctor
-        public CommandHandler(DiscordSocketClient client, CommandService commands) {
+        public CommandHandler(DiscordSocketClient client, CommandService commands, ServiceProvider services) {
             _commands = commands;
             _discordClient = client;
+            _services = services;
+            _lavaNode = (LavaNode)_services.GetService(typeof(LavaNode));
         }
 
         public async Task InstallCommandsAsync() {
-            logFile = new StreamWriter("log.txt");
+            _logFile = new StreamWriter("log.txt");
             // Hook the MessageReceived event into our command handler
             _discordClient.MessageReceived += HandleCommandAsync;
             _discordClient.MessageDeleted += HandleMessageDelete;
             _discordClient.MessageUpdated += HandleMessageUpdate;
-
+            _discordClient.Ready += HandleReady;
 
             // If you do not use Dependency Injection, pass null.
             // See Dependency Injection guide for more information.
-            await _commands.AddModulesAsync(assembly: Assembly.GetEntryAssembly(),
-                services: null);
+            await _commands.AddModulesAsync(Assembly.GetEntryAssembly(),
+                _services);
             await _discordClient.SetGameAsync("with String!");
         }
 
@@ -48,7 +54,7 @@ namespace Stringdicator {
             if (!(messageParam is SocketUserMessage message)) return;
             // Ignore messages from other bots
             if (message.Author.IsBot && message.Author.Id.Equals(_discordClient.CurrentUser.Id)) return;
-            
+
             // Create a WebSocket-based command context based on the message
             var context = new SocketCommandContext(_discordClient, message);
 
@@ -85,7 +91,7 @@ namespace Stringdicator {
             await _commands.ExecuteAsync(
                 context: context,
                 argPos: startPos,
-                services: null);
+                services: _services);
         }
 
 
@@ -108,7 +114,7 @@ namespace Stringdicator {
             Console.WriteLine(
                 $"Message from {message.Author} was removed from the channel {channel.Name}: \n"
                 + message.Content);
-            logFile.WriteLine(
+            _logFile.WriteLine(
                 $"{DateTime.Now}: Message from {message.Author} was removed from the channel {channel.Name}: \n"
                 + message.Content);
 
@@ -135,8 +141,15 @@ namespace Stringdicator {
 
             Console.WriteLine(
                 $"Message from {message.Author} in {channel.Name} was edited from {message} -> {newMessage}");
-            await logFile.WriteLineAsync(
+            await _logFile.WriteLineAsync(
                 $"{DateTime.Now}: Message from {message.Author} in {channel.Name} was edited from {message} -> {newMessage}");
+        }
+
+        private async Task HandleReady() {
+            Console.WriteLine("Stringdicator is connected!");
+            if (!_lavaNode.IsConnected) {
+                await _lavaNode.ConnectAsync();
+            }
         }
 
         /**

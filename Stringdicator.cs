@@ -4,6 +4,8 @@ using System.Threading.Tasks;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
+using Microsoft.Extensions.DependencyInjection;
+using Victoria;
 
 namespace Stringdicator {
     class Stringdicator {
@@ -36,22 +38,26 @@ namespace Stringdicator {
 
         private async Task MainAsync() {
             //Load Token from env file
-            string root = Directory.GetCurrentDirectory();
-            string dotenv = Path.Combine(root, ".env");
+            var root = Directory.GetCurrentDirectory();
+            var dotenv = Path.Combine(root, ".env");
             DotEnv.Load(dotenv);
-            
-            
+
+
+            var services = new ServiceCollection()
+                .AddSingleton(_discordClient)
+                .AddSingleton(_commands)
+                .AddSingleton<CommandHandler>()
+                .AddLavaNode(x => { x.SelfDeaf = false; })
+                .BuildServiceProvider();
+
             await _discordClient.LoginAsync(TokenType.Bot, Environment.GetEnvironmentVariable("TOKEN"));
             await _discordClient.StartAsync();
-            
-            CommandHandler handler = new CommandHandler(_discordClient, _commands);
+
+
+            var handler = new CommandHandler(_discordClient, _commands, services);
             await handler.InstallCommandsAsync();
 
             // Block this task until the program is closed.
-            _discordClient.Ready += () => {
-                Console.WriteLine("Stringdicator is connected!");
-                return Task.CompletedTask;
-            };
             await Task.Delay(-1);
         }
     }
