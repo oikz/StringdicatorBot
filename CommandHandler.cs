@@ -46,7 +46,9 @@ namespace Stringdicator {
         private async Task HandleCommandAsync(SocketMessage messageParam) {
             // Don't process the command if it was a system message
             if (!(messageParam is SocketUserMessage message)) return;
-
+            // Ignore messages from other bots
+            if (message.Author.IsBot && message.Author.Id.Equals(_discordClient.CurrentUser.Id)) return;
+            
             // Create a WebSocket-based command context based on the message
             var context = new SocketCommandContext(_discordClient, message);
 
@@ -73,10 +75,9 @@ namespace Stringdicator {
             // Create a number to track where the prefix ends and the command begins
             var startPos = 0;
 
-            // Determine if the message is a command based on the prefix and make sure no bots trigger commands
+            // Determine if the message is a command based on the prefix
             if (!(message.HasCharPrefix('!', ref startPos) ||
-                  message.HasMentionPrefix(_discordClient.CurrentUser, ref startPos)) ||
-                message.Author.IsBot)
+                  message.HasMentionPrefix(_discordClient.CurrentUser, ref startPos)))
                 return;
 
             // Execute the command with the command context we just
@@ -174,7 +175,7 @@ namespace Stringdicator {
                 filename = filename.Replace(".gif", ".png");
                 bmp.Save(filename);
             }
-            
+
             MakePredictionRequest(filename, context).Wait();
         }
 
@@ -185,11 +186,11 @@ namespace Stringdicator {
         private static async Task MakePredictionRequest(string imageFilePath, SocketCommandContext context) {
             var client = new HttpClient();
 
-            client.DefaultRequestHeaders.Add("Prediction-Key", "323fbb7c35b34af48005a8563b95333d");
+            client.DefaultRequestHeaders.Add("Prediction-Key", "1414d8884b384beba783ebba4a225082");
 
             //Prediction endpoint
             const string url =
-                "https://string3.cognitiveservices.azure.com/customvision/v3.0/Prediction/b0ad2694-b2da-4342-835e-26d7bf6018fc/classify/iterations/String/image";
+                "https://string3-prediction.cognitiveservices.azure.com/customvision/v3.0/Prediction/b0ad2694-b2da-4342-835e-26d7bf6018fc/classify/iterations/String/image";
 
             // Sends the image as a byte array to the endpoint to run a prediction on it
             var byteData = GetImageAsByteArray(imageFilePath);
