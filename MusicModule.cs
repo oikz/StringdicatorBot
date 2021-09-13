@@ -65,6 +65,8 @@ namespace Stringdicator {
         /**
          * Leave the voice channel that the user is currently in
          */
+        [Command("StringLeave")]
+        [Summary("Leave the voice channel that the user is currently in")]
         private async Task LeaveAsync() {
             var voiceState = Context.User as IVoiceState;
             if (voiceState?.VoiceChannel == null) {
