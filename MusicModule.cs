@@ -166,7 +166,7 @@ namespace Stringdicator {
         private async Task RemoveFromQueueAsync([Remainder] int index) {
             var player = _lavaNode.GetPlayer(Context.Guild);
             if (player.Queue.Count < index) {
-                await EmbedText("Index is shorter than the queue length", false);
+                await EmbedText("Index is longer than the queue length", false);
                 return;
             }
 
