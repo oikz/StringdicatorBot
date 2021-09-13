@@ -7,19 +7,25 @@ using Discord.Commands;
 using GoogleApi;
 using GoogleApi.Entities.Search;
 using GoogleApi.Entities.Search.Image.Request;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Stringdicator {
     /**
      * Basic help module that outputs available commands to users
      */
     public class HelpModule : ModuleBase<SocketCommandContext> {
+        private ServiceProvider _serviceProvider;
+        public HelpModule(ServiceProvider serviceProvider) {
+            _serviceProvider = serviceProvider;
+        }
+        
         [Command("Stringdicator")]
         [Summary("Outputs all commands")]
         public async Task HelpAsync() {
             //Kinda jank but gets all the commands again
             var commands = new CommandService();
-            await commands.AddModulesAsync(assembly: Assembly.GetEntryAssembly(),
-                services: null);
+            await commands.AddModulesAsync(Assembly.GetEntryAssembly(),
+                _serviceProvider);
 
             //Embed builder
             var builder = new EmbedBuilder();
