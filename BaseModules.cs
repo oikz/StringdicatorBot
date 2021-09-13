@@ -116,7 +116,7 @@ namespace Stringdicator {
             Console.WriteLine("Stringsearch! - " + searchTerm + " " + item.Link);
 
             //Do an image classification prediction for stringsearch images as well
-            CommandHandler.MakePrediction(item.Link, Context);
+            ImagePrediction.MakePrediction(item.Link, Context);
             GC.Collect();
             //Call the prediction method
         }
