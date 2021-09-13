@@ -183,7 +183,7 @@ namespace Stringdicator {
         private async Task PauseAsync() {
             var player = _lavaNode.GetPlayer(Context.Guild);
             await player.PauseAsync();
-            await EmbedText("Paused");
+            await ReplyAsync("Paused");
         }
 
         /**
@@ -194,7 +194,7 @@ namespace Stringdicator {
         private async Task ResumeAsync() {
             var player = _lavaNode.GetPlayer(Context.Guild);
             await player.ResumeAsync();
-            await EmbedText("Resumed");
+            await ReplyAsync("Resumed");
         }
 
         /**
@@ -222,6 +222,11 @@ namespace Stringdicator {
             builder.WithColor(3447003);
             builder.WithDescription("");
 
+            if (player.Queue.Count == 0) {
+                await EmbedText("Queue is empty", false);
+                return;
+            }
+            
             for (var i = 0; i < player.Queue.Count; i++) {
                 var lavaTrack = player.Queue.ElementAt(i);
                 var fieldBuilder = new EmbedFieldBuilder {Name = lavaTrack.Title, Value = lavaTrack.Duration};
