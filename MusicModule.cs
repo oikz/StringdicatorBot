@@ -81,7 +81,7 @@ namespace Stringdicator {
         /**
          * Play a song or queue up a song
          */
-        [Command("StringPlay")]
+        [Command("StringPlay", RunMode = RunMode.Async)]
         [Summary("Play a song or queue up a song")]
         public async Task PlayAsync([Remainder] string searchQuery) {
             //Ensure that the user supplies search terms
