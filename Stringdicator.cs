@@ -18,7 +18,7 @@ namespace Stringdicator {
                 // If you or another service needs to do anything with messages
                 // (eg. checking Reactions, checking the content of edited/deleted messages),
                 // you must set the MessageCacheSize. You may adjust the number as needed.
-                MessageCacheSize = 50,
+                MessageCacheSize = 250,
             });
 
             _commands = new CommandService(new CommandServiceConfig {

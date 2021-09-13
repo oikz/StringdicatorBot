@@ -219,10 +219,11 @@ namespace Stringdicator {
             foreach (var current in probabilities.Where(result => result.Key > pair.Key)) {
                 pair = current;
             }
+
             Console.WriteLine(pair);
 
             if (pair.Value.Equals("String") && pair.Key > 0.8) {
-                Console.WriteLine("String detected!");
+                await context.Message.ReplyAsync("This looks like String!");
             }
         }
 
