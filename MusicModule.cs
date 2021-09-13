@@ -31,7 +31,6 @@ namespace Stringdicator {
 
             var player = args.Player;
             if (!player.Queue.TryDequeue(out var queueable)) {
-                await player.TextChannel.SendMessageAsync("Queue completed! Please add more tracks to rock n' roll!");
                 return;
             }
 
@@ -161,6 +160,16 @@ namespace Stringdicator {
         private async Task PauseAsync() {
             var player = _lavaNode.GetPlayer(Context.Guild);
             await player.PauseAsync();
+        }
+
+        /**
+         * Resume the currently playing song
+         */
+        [Command("StringResume")]
+        [Summary("Resume the currently playing song")]
+        private async Task ResumeAsync() {
+            var player = _lavaNode.GetPlayer(Context.Guild);
+            await player.ResumeAsync();
         }
     }
 }
