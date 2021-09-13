@@ -41,7 +41,7 @@ namespace Stringdicator {
 
             await args.Player.PlayAsync(track);
             await args.Player.TextChannel.SendMessageAsync(
-                $"{args.Reason}: {args.Track.Title}\nNow playing: {track.Title}");
+                "Now playing: {track.Title}");
         }
 
 
@@ -60,6 +60,22 @@ namespace Stringdicator {
 
             //Try to join the channel
             await _lavaNode.JoinAsync(voiceState.VoiceChannel, Context.Channel as ITextChannel);
+        }
+
+        /**
+         * Leave the voice channel that the user is currently in
+         */
+        private async Task LeaveAsync() {
+            var voiceState = Context.User as IVoiceState;
+            if (voiceState?.VoiceChannel == null) {
+                return;
+            }
+
+            if (_lavaNode.HasPlayer(Context.Guild)) {
+                var player = _lavaNode.GetPlayer(Context.Guild);
+                await _lavaNode.LeaveAsync(player.VoiceChannel);
+                await ReplyAsync("Disconnected");
+            }
         }
 
         /**
@@ -170,6 +186,29 @@ namespace Stringdicator {
         private async Task ResumeAsync() {
             var player = _lavaNode.GetPlayer(Context.Guild);
             await player.ResumeAsync();
+        }
+
+        /**
+         * Display the current queue
+         */
+        [Command("StringQueue")]
+        [Summary("Display the current song queue")]
+        private async Task QueueAsync() {
+            var player = _lavaNode.GetPlayer(Context.Guild);
+            //Create an embed using that image url
+            var builder = new EmbedBuilder();
+            builder.WithTitle("String Music Queue");
+            builder.WithThumbnailUrl(Context.Client.CurrentUser.GetAvatarUrl());
+            builder.WithColor(3447003);
+            builder.WithDescription("");
+
+            for (var i = 0; i < player.Queue.Count; i++) {
+                var lavaTrack = player.Queue.ElementAt(i);
+                var fieldBuilder = new EmbedFieldBuilder {Name = lavaTrack.Title, Value = "Test"};
+                builder.AddField(fieldBuilder);
+            }
+
+            await ReplyAsync("", false, builder.Build());
         }
     }
 }
