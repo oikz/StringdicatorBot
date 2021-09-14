@@ -86,6 +86,10 @@ namespace Stringdicator {
         [Command("StringPlay", RunMode = RunMode.Async)]
         [Summary("Play a song or queue up a song")]
         public async Task PlayAsync([Remainder] string searchQuery) {
+            if (!InGuild().Result) {
+                return;
+            }
+            
             //Ensure that the user supplies search terms
             if (string.IsNullOrWhiteSpace(searchQuery)) {
                 await EmbedText("Please provide search terms.", false);
@@ -155,6 +159,10 @@ namespace Stringdicator {
         [Command("StringSkip")]
         [Summary("Skips the currently playing song")]
         private async Task SkipAsync() {
+            if (!InGuild().Result) {
+                return;
+            }
+            
             var player = _lavaNode.GetPlayer(Context.Guild);
             await EmbedText("Song Skipped: " + player.Track.Title, true, "", player.Track.FetchArtworkAsync().Result);
             await player.SkipAsync();
@@ -166,6 +174,10 @@ namespace Stringdicator {
         [Command("StringSkip")]
         [Summary("Skips a specified song in the queue")]
         private async Task RemoveFromQueueAsync([Remainder] int index) {
+            if (!InGuild().Result) {
+                return;
+            }
+            
             var player = _lavaNode.GetPlayer(Context.Guild);
             if (player.Queue.Count < index) {
                 await EmbedText("Index is longer than the queue length", false);
@@ -183,6 +195,10 @@ namespace Stringdicator {
         [Command("StringPause")]
         [Summary("Pause the currently playing song")]
         private async Task PauseAsync() {
+            if (!InGuild().Result) {
+                return;
+            }
+            
             var player = _lavaNode.GetPlayer(Context.Guild);
             await player.PauseAsync();
             await ReplyAsync("Paused");
@@ -194,6 +210,10 @@ namespace Stringdicator {
         [Command("StringResume")]
         [Summary("Resume the currently playing song")]
         private async Task ResumeAsync() {
+            if (!InGuild().Result) {
+                return;
+            }
+            
             var player = _lavaNode.GetPlayer(Context.Guild);
             await player.ResumeAsync();
             await ReplyAsync("Resumed");
@@ -205,6 +225,9 @@ namespace Stringdicator {
         [Command("StringSong")]
         [Summary("Show the currently playing song")]
         private async Task CurrentSongAsync() {
+            if (!InGuild().Result) {
+                return;
+            }
             var player = _lavaNode.GetPlayer(Context.Guild);
             await EmbedText(player.Track.Title, true, player.Track.Position.ToString(@"hh\:mm\:ss") + " / " + player.Track.Duration,
                 player.Track.FetchArtworkAsync().Result);
@@ -216,6 +239,10 @@ namespace Stringdicator {
         [Command("StringQueue")]
         [Summary("Display the current song queue")]
         private async Task QueueAsync() {
+            if (!InGuild().Result) {
+                return;
+            }
+            
             var player = _lavaNode.GetPlayer(Context.Guild);
             //Create an embed using that image url
             var builder = new EmbedBuilder();
@@ -248,6 +275,15 @@ namespace Stringdicator {
 
             builder.WithColor(3447003);
             await ReplyAsync("", false, builder.Build());
+        }
+
+        /**
+         * Check if the bot is in a voice channel
+         */
+        private async Task<bool> InGuild() {
+            if (_lavaNode.HasPlayer(Context.Guild)) return true;
+            await ReplyAsync("Not currently in a voice channel");
+            return false;
         }
     }
 }
