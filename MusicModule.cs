@@ -109,21 +109,19 @@ namespace Stringdicator {
             var player = _lavaNode.GetPlayer(Context.Guild);
             //Queue up next song
             if (player.PlayerState == PlayerState.Playing || player.PlayerState == PlayerState.Paused) {
-                
                 //Playlist queueing
                 if (!string.IsNullOrWhiteSpace(searchResponse.Playlist.Name)) {
                     foreach (var track in searchResponse.Tracks) {
                         player.Queue.Enqueue(track);
                     }
 
-                    await EmbedText($"Enqueued {searchResponse.Tracks.Count} tracks.");
+                    await EmbedText($"{searchResponse.Tracks.Count} tracks added to queue");
                 } else {
-                    
                     //Single song queueing
                     var track = searchResponse.Tracks.ElementAt(0);
                     player.Queue.Enqueue(track);
-                    await EmbedText($"Enqueued: {track.Title}", true, track.Duration.ToString(),
-                        track.FetchArtworkAsync().Result);
+                    await EmbedText($"{track.Title}", true, TrimTime(track.Duration.ToString(@"dd\:hh\:mm\:ss")),
+                        track.FetchArtworkAsync().Result, true);
                 }
 
                 //Play this song now
@@ -135,20 +133,20 @@ namespace Stringdicator {
                     for (var i = 0; i < searchResponse.Tracks.Count; i++) {
                         if (i == 0) {
                             await player.PlayAsync(track);
-                            await EmbedText($"Now Playing: {track.Title}", true, track.Duration.ToString(),
-                                track.FetchArtworkAsync().Result);
+                            await EmbedText($"Now Playing: {track.Title}", true, TrimTime(track.Duration.ToString(@"dd\:hh\:mm\:ss")),
+                                track.FetchArtworkAsync().Result, true);
                         } else {
                             player.Queue.Enqueue(searchResponse.Tracks.ElementAt(i));
                         }
                     }
 
-                    await EmbedText($"Enqueued {searchResponse.Tracks.Count} tracks.", true, track.Duration.ToString(),
+                    await EmbedText($"{searchResponse.Tracks.Count} tracks added to queue", true,
+                        TrimTime(track.Duration.ToString(@"dd\:hh\:mm\:ss")),
                         track.FetchArtworkAsync().Result);
                 } else {
-                    
                     //Single Song queueing
                     await player.PlayAsync(track);
-                    await EmbedText($"Now Playing: {track.Title}", true, track.Duration.ToString(),
+                    await EmbedText($"Now Playing: {track.Title}", true, TrimTime(track.Duration.ToString(@"dd\:hh\:mm\:ss")),
                         track.FetchArtworkAsync().Result);
                 }
             }
@@ -186,7 +184,7 @@ namespace Stringdicator {
                 return;
             }
 
-            await EmbedText("Song Skipped: " + player.Track.Title, true, "",
+            await EmbedText("Song Skipped: " + player.Queue.ElementAt(index - 1).Title, true, "",
                 player.Queue.ElementAt(index - 1).FetchArtworkAsync().Result);
             player.Queue.RemoveAt(index - 1);
         }
@@ -235,9 +233,10 @@ namespace Stringdicator {
             if (player.PlayerState == PlayerState.None) {
                 await EmbedText("Not playing anything", false);
             }
-            
+
             await EmbedText("Now Playing: ", true, $"[{player.Track.Title}]({player.Track.Url})" +
-                                                   $"\n {player.Track.Position:hh\\:mm\\:ss} / {player.Track.Duration}",
+                                                   $"\n {TrimTime(player.Track.Position.ToString(@"dd\:hh\:mm\:ss"))} / " +
+                                                   $"{TrimTime(player.Track.Duration.ToString(@"dd\:hh\:mm\:ss"))}",
                 player.Track.FetchArtworkAsync().Result);
         }
 
@@ -251,18 +250,18 @@ namespace Stringdicator {
                 return;
             }
 
-            if (!_lavaNode.HasPlayer(Context.Guild)){
+            if (!_lavaNode.HasPlayer(Context.Guild)) {
                 return;
             }
-            
+
             var player = _lavaNode.GetPlayer(Context.Guild);
-            
+
             if ((player.PlayerState == PlayerState.Stopped || player.PlayerState == PlayerState.None) &&
                 player.Queue.Count == 0) {
                 await EmbedText("Queue is empty", false);
                 return;
             }
-            
+
             //Create an embed using that image url
             var builder = new EmbedBuilder();
             builder.WithTitle("String Music Queue");
@@ -276,7 +275,8 @@ namespace Stringdicator {
                 builder.AddField(new EmbedFieldBuilder {
                     Name = "Now Playing: ",
                     Value = $"[{player.Track.Title}]({player.Track.Url})" +
-                            $"\n {player.Track.Position:hh\\:mm\\:ss} / {player.Track.Duration}"
+                            $"\n {TrimTime(player.Track.Position.ToString(@"dd\:hh\:mm\:ss"))} " +
+                            $"/ {TrimTime(player.Track.Duration.ToString(@"dd\:hh\:mm\:ss"))}"
                 });
             }
 
@@ -285,7 +285,7 @@ namespace Stringdicator {
             builder.AddField(new EmbedFieldBuilder {
                 Name = "Next: ",
                 Value = $"[{player.Queue.ElementAt(0).Title}]({player.Queue.ElementAt(0).Url})" +
-                        $"\n {player.Queue.ElementAt(0).Duration.ToString()}"
+                        $"\n {TrimTime(player.Queue.ElementAt(0).Duration.ToString(@"dd\:hh\:mm\:ss"))}"
             });
 
             //Remaining Queue
@@ -294,7 +294,7 @@ namespace Stringdicator {
                 var fieldBuilder = new EmbedFieldBuilder {
                     Name = $"Queue position {i + 1}",
                     Value = $"[{lavaTrack.Title}]({lavaTrack.Url})" +
-                            $"\n {lavaTrack.Duration.ToString()}"
+                            $"\n {TrimTime(lavaTrack.Duration.ToString(@"dd\:hh\:mm\:ss"))}"
                 };
                 builder.AddField(fieldBuilder);
             }
@@ -303,13 +303,15 @@ namespace Stringdicator {
         }
 
         private async Task EmbedText(string title, bool hasThumbnail = true, string description = "",
-            string thumbnail = "") {
+            string thumbnail = "", bool hasAuthor = false) {
             var builder = new EmbedBuilder();
             builder.WithTitle(title);
             builder.WithDescription(description);
             if (hasThumbnail)
                 builder.WithThumbnailUrl(thumbnail == "" ? Context.Client.CurrentUser.GetAvatarUrl() : thumbnail);
-
+            if (hasAuthor)
+                builder.WithAuthor(new EmbedAuthorBuilder
+                    {IconUrl = Context.User.GetAvatarUrl(), Name = "Added to queue"});
             builder.WithColor(3447003);
             await ReplyAsync("", false, builder.Build());
         }
@@ -322,6 +324,17 @@ namespace Stringdicator {
             if (voiceState?.VoiceChannel != null) return true;
             await EmbedText("You must be connected to a voice channel!", false);
             return false;
+        }
+
+        /**
+         * Trim the start of the time string to remove any leading "00:" sections
+         */
+        private static string TrimTime(string time) {
+            if (time.StartsWith("00:")) {
+                time = time.TrimStart('0', ':');
+            }
+            
+            return time;
         }
     }
 }
