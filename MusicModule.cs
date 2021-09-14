@@ -54,7 +54,7 @@ namespace Stringdicator {
         [Summary("Join the voice channel that the user is currently in")]
         private async Task JoinAsync() {
             //Check if the user is in a voice channel
-            if (!InGuild().Result) {
+            if (!UserInVoice().Result) {
                 return;
             }
 
@@ -88,7 +88,7 @@ namespace Stringdicator {
         [Command("StringPlay", RunMode = RunMode.Async)]
         [Summary("Play a song or queue up a song")]
         public async Task PlayAsync([Remainder] string searchQuery) {
-            if (!InGuild().Result) {
+            if (!UserInVoice().Result) {
                 return;
             }
 
@@ -107,7 +107,7 @@ namespace Stringdicator {
 
             //Get the player and start playing/queueing a single song or playlist
             var player = _lavaNode.GetPlayer(Context.Guild);
-            //Single Song
+            //Queue up next song
             if (player.PlayerState == PlayerState.Playing || player.PlayerState == PlayerState.Paused) {
                 
                 //Playlist queueing
@@ -161,7 +161,7 @@ namespace Stringdicator {
         [Command("StringSkip")]
         [Summary("Skips the currently playing song")]
         private async Task SkipAsync() {
-            if (!InGuild().Result) {
+            if (!UserInVoice().Result) {
                 return;
             }
 
@@ -176,7 +176,7 @@ namespace Stringdicator {
         [Command("StringSkip")]
         [Summary("Skips a specified song in the queue")]
         private async Task RemoveFromQueueAsync([Remainder] int index) {
-            if (!InGuild().Result) {
+            if (!UserInVoice().Result) {
                 return;
             }
 
@@ -197,13 +197,13 @@ namespace Stringdicator {
         [Command("StringPause")]
         [Summary("Pause the currently playing song")]
         private async Task PauseAsync() {
-            if (!InGuild().Result) {
+            if (!UserInVoice().Result) {
                 return;
             }
 
             var player = _lavaNode.GetPlayer(Context.Guild);
             await player.PauseAsync();
-            await ReplyAsync("Paused");
+            await EmbedText("Paused", false);
         }
 
         /**
@@ -212,13 +212,13 @@ namespace Stringdicator {
         [Command("StringResume")]
         [Summary("Resume the currently playing song")]
         private async Task ResumeAsync() {
-            if (!InGuild().Result) {
+            if (!UserInVoice().Result) {
                 return;
             }
 
             var player = _lavaNode.GetPlayer(Context.Guild);
             await player.ResumeAsync();
-            await ReplyAsync("Resumed");
+            await EmbedText("Resumed", false);
         }
 
         /**
@@ -227,11 +227,15 @@ namespace Stringdicator {
         [Command("StringSong")]
         [Summary("Show the currently playing song")]
         private async Task CurrentSongAsync() {
-            if (!InGuild().Result) {
+            if (!UserInVoice().Result) {
                 return;
             }
 
             var player = _lavaNode.GetPlayer(Context.Guild);
+            if (player.PlayerState == PlayerState.None) {
+                await EmbedText("Not playing anything", false);
+            }
+            
             await EmbedText("Now Playing: ", true, $"[{player.Track.Title}]({player.Track.Url})" +
                                                    $"\n {player.Track.Position:hh\\:mm\\:ss} / {player.Track.Duration}",
                 player.Track.FetchArtworkAsync().Result);
@@ -243,7 +247,7 @@ namespace Stringdicator {
         [Command("StringQueue")]
         [Summary("Display the current song queue")]
         private async Task QueueAsync() {
-            if (!InGuild().Result) {
+            if (!UserInVoice().Result) {
                 return;
             }
 
@@ -306,7 +310,7 @@ namespace Stringdicator {
         /**
          * Check if the bot is in a voice channel
          */
-        private async Task<bool> InGuild() {
+        private async Task<bool> UserInVoice() {
             var voiceState = Context.User as IVoiceState;
             if (voiceState?.VoiceChannel != null) return true;
             await EmbedText("You must be connected to a voice channel!", false);
