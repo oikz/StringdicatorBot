@@ -92,17 +92,10 @@ namespace Stringdicator {
                 return;
             }
 
-            //Ensure that the user supplies search terms
-            if (string.IsNullOrWhiteSpace(searchQuery)) {
-                await EmbedText("Please provide search terms.", false);
-                return;
-            }
-
             //Join the voice channel if not already in it
             if (!_lavaNode.HasPlayer(Context.Guild)) {
                 await JoinAsync();
             }
-
 
             //Find the search result from the search terms
             var searchResponse = await _lavaNode.SearchAsync(SearchType.YouTube, searchQuery);
@@ -116,6 +109,8 @@ namespace Stringdicator {
             var player = _lavaNode.GetPlayer(Context.Guild);
             //Single Song
             if (player.PlayerState == PlayerState.Playing || player.PlayerState == PlayerState.Paused) {
+                
+                //Playlist queueing
                 if (!string.IsNullOrWhiteSpace(searchResponse.Playlist.Name)) {
                     foreach (var track in searchResponse.Tracks) {
                         player.Queue.Enqueue(track);
@@ -123,16 +118,19 @@ namespace Stringdicator {
 
                     await EmbedText($"Enqueued {searchResponse.Tracks.Count} tracks.");
                 } else {
+                    
+                    //Single song queueing
                     var track = searchResponse.Tracks.ElementAt(0);
                     player.Queue.Enqueue(track);
                     await EmbedText($"Enqueued: {track.Title}", true, track.Duration.ToString(),
                         track.FetchArtworkAsync().Result);
                 }
 
-                //Playlist
+                //Play this song now
             } else {
                 var track = searchResponse.Tracks.ElementAt(0);
 
+                //Play list queueing
                 if (!string.IsNullOrWhiteSpace(searchResponse.Playlist.Name)) {
                     for (var i = 0; i < searchResponse.Tracks.Count; i++) {
                         if (i == 0) {
@@ -147,6 +145,8 @@ namespace Stringdicator {
                     await EmbedText($"Enqueued {searchResponse.Tracks.Count} tracks.", true, track.Duration.ToString(),
                         track.FetchArtworkAsync().Result);
                 } else {
+                    
+                    //Single Song queueing
                     await player.PlayAsync(track);
                     await EmbedText($"Now Playing: {track.Title}", true, track.Duration.ToString(),
                         track.FetchArtworkAsync().Result);
