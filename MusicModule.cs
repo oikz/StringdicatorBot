@@ -29,16 +29,19 @@ namespace Stringdicator {
                 return;
             }
 
+            //If queue is empty, return
             var player = args.Player;
             if (!player.Queue.TryDequeue(out var queueable)) {
                 return;
             }
 
+            //General Error case for queue
             if (!(queueable is { } track)) {
                 await player.TextChannel.SendMessageAsync("Next item in queue is not a track.");
                 return;
             }
 
+            //Play the song and output whats being played
             await args.Player.PlayAsync(track);
             await CurrentSongAsync();
         }
@@ -47,7 +50,7 @@ namespace Stringdicator {
         /**
          * Join the voice channel that the user is currently in
          */
-        [Command("Join")]
+        [Command("StringJoin")]
         [Summary("Join the voice channel that the user is currently in")]
         private async Task JoinAsync() {
             //Check if the user is in a voice channel
@@ -55,6 +58,7 @@ namespace Stringdicator {
                 return;
             }
 
+            //Get the users voiceState
             var voiceState = Context.User as IVoiceState;
             //Try to join the channel
             await _lavaNode.JoinAsync(voiceState.VoiceChannel, Context.Channel as ITextChannel);
@@ -87,7 +91,7 @@ namespace Stringdicator {
             if (!InGuild().Result) {
                 return;
             }
-            
+
             //Ensure that the user supplies search terms
             if (string.IsNullOrWhiteSpace(searchQuery)) {
                 await EmbedText("Please provide search terms.", false);
@@ -160,7 +164,7 @@ namespace Stringdicator {
             if (!InGuild().Result) {
                 return;
             }
-            
+
             var player = _lavaNode.GetPlayer(Context.Guild);
             await EmbedText("Song Skipped: " + player.Track.Title, true, "", player.Track.FetchArtworkAsync().Result);
             await player.SkipAsync();
@@ -175,16 +179,16 @@ namespace Stringdicator {
             if (!InGuild().Result) {
                 return;
             }
-            
+
             var player = _lavaNode.GetPlayer(Context.Guild);
-            if (player.Queue.Count < index) {
+            if (player.Queue.Count < index - 1) {
                 await EmbedText("Index is longer than the queue length", false);
                 return;
             }
 
             await EmbedText("Song Skipped: " + player.Track.Title, true, "",
-                player.Queue.ElementAt(index).FetchArtworkAsync().Result);
-            player.Queue.RemoveAt(index);
+                player.Queue.ElementAt(index - 1).FetchArtworkAsync().Result);
+            player.Queue.RemoveAt(index - 1);
         }
 
         /**
@@ -196,7 +200,7 @@ namespace Stringdicator {
             if (!InGuild().Result) {
                 return;
             }
-            
+
             var player = _lavaNode.GetPlayer(Context.Guild);
             await player.PauseAsync();
             await ReplyAsync("Paused");
@@ -211,7 +215,7 @@ namespace Stringdicator {
             if (!InGuild().Result) {
                 return;
             }
-            
+
             var player = _lavaNode.GetPlayer(Context.Guild);
             await player.ResumeAsync();
             await ReplyAsync("Resumed");
@@ -226,9 +230,10 @@ namespace Stringdicator {
             if (!InGuild().Result) {
                 return;
             }
+
             var player = _lavaNode.GetPlayer(Context.Guild);
             await EmbedText("Now Playing: ", true, $"[{player.Track.Title}]({player.Track.Url})" +
-                                                   $"\n {player.Track.Position:hh\\:mm\\:ss} + / {player.Track.Duration}",
+                                                   $"\n {player.Track.Position:hh\\:mm\\:ss} / {player.Track.Duration}",
                 player.Track.FetchArtworkAsync().Result);
         }
 
@@ -241,7 +246,7 @@ namespace Stringdicator {
             if (!InGuild().Result) {
                 return;
             }
-            
+
             var player = _lavaNode.GetPlayer(Context.Guild);
             //Create an embed using that image url
             var builder = new EmbedBuilder();
@@ -260,7 +265,7 @@ namespace Stringdicator {
                 builder.AddField(new EmbedFieldBuilder {
                     Name = "Now Playing: ",
                     Value = $"[{player.Track.Title}]({player.Track.Url})" +
-                            $"\n {player.Track.Position:hh\\:mm\\:ss} + / {player.Track.Duration}"
+                            $"\n {player.Track.Position:hh\\:mm\\:ss} / {player.Track.Duration}"
                 });
             }
 
@@ -306,7 +311,6 @@ namespace Stringdicator {
             if (voiceState?.VoiceChannel != null) return true;
             await EmbedText("You must be connected to a voice channel!", false);
             return false;
-
         }
     }
 }
