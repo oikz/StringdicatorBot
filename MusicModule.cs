@@ -250,6 +250,11 @@ namespace Stringdicator {
             if (!UserInVoice().Result) {
                 return;
             }
+
+            if (!_lavaNode.HasPlayer(Context.Guild)){
+                return;
+            }
+            
             var player = _lavaNode.GetPlayer(Context.Guild);
             
             if ((player.PlayerState == PlayerState.Stopped || player.PlayerState == PlayerState.None) &&
