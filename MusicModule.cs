@@ -250,8 +250,14 @@ namespace Stringdicator {
             if (!UserInVoice().Result) {
                 return;
             }
-
             var player = _lavaNode.GetPlayer(Context.Guild);
+            
+            if ((player.PlayerState == PlayerState.Stopped || player.PlayerState == PlayerState.None) &&
+                player.Queue.Count == 0) {
+                await EmbedText("Queue is empty", false);
+                return;
+            }
+            
             //Create an embed using that image url
             var builder = new EmbedBuilder();
             builder.WithTitle("String Music Queue");
@@ -261,10 +267,6 @@ namespace Stringdicator {
 
             if (player.PlayerState == PlayerState.Playing && player.Queue.Count == 0) {
                 await CurrentSongAsync();
-            } else if ((player.PlayerState == PlayerState.Stopped || player.PlayerState == PlayerState.None) &&
-                       player.Queue.Count == 0) {
-                await EmbedText("Queue is empty", false);
-                return;
             } else if (player.PlayerState == PlayerState.Playing) {
                 builder.AddField(new EmbedFieldBuilder {
                     Name = "Now Playing: ",
