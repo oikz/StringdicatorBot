@@ -52,12 +52,11 @@ namespace Stringdicator {
         [Summary("Join the voice channel that the user is currently in")]
         private async Task JoinAsync() {
             //Check if the user is in a voice channel
-            var voiceState = Context.User as IVoiceState;
-            if (voiceState?.VoiceChannel == null) {
-                await EmbedText("You must be connected to a voice channel!", false);
+            if (!InGuild().Result) {
                 return;
             }
 
+            var voiceState = Context.User as IVoiceState;
             //Try to join the channel
             await _lavaNode.JoinAsync(voiceState.VoiceChannel, Context.Channel as ITextChannel);
         }
@@ -281,9 +280,11 @@ namespace Stringdicator {
          * Check if the bot is in a voice channel
          */
         private async Task<bool> InGuild() {
-            if (_lavaNode.HasPlayer(Context.Guild)) return true;
-            await ReplyAsync("Not currently in a voice channel");
+            var voiceState = Context.User as IVoiceState;
+            if (voiceState?.VoiceChannel != null) return true;
+            await EmbedText("You must be connected to a voice channel!", false);
             return false;
+
         }
     }
 }
