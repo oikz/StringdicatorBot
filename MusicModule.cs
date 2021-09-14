@@ -24,7 +24,7 @@ namespace Stringdicator {
          * Method called when the currently playing track ends
          * Obtained mostly from the Victoria Tutorial pages
          */
-        private static async Task OnTrackEnded(TrackEndedEventArgs args) {
+        private async Task OnTrackEnded(TrackEndedEventArgs args) {
             if (args.Reason != TrackEndReason.Finished) {
                 return;
             }
@@ -40,8 +40,7 @@ namespace Stringdicator {
             }
 
             await args.Player.PlayAsync(track);
-            await args.Player.TextChannel.SendMessageAsync(
-                "Now playing: " + track.Title);
+            await CurrentSongAsync();
         }
 
 
@@ -228,7 +227,8 @@ namespace Stringdicator {
                 return;
             }
             var player = _lavaNode.GetPlayer(Context.Guild);
-            await EmbedText(player.Track.Title, true, player.Track.Position.ToString(@"hh\:mm\:ss") + " / " + player.Track.Duration,
+            await EmbedText("Now Playing: ", true, $"[{player.Track.Title}]({player.Track.Url})" +
+                                                   $"\n {player.Track.Position:hh\\:mm\\:ss} + / {player.Track.Duration}",
                 player.Track.FetchArtworkAsync().Result);
         }
 
@@ -250,14 +250,36 @@ namespace Stringdicator {
             builder.WithColor(3447003);
             builder.WithDescription("");
 
-            if (player.Queue.Count == 0) {
+            if (player.PlayerState == PlayerState.Playing && player.Queue.Count == 0) {
+                await CurrentSongAsync();
+            } else if ((player.PlayerState == PlayerState.Stopped || player.PlayerState == PlayerState.None) &&
+                       player.Queue.Count == 0) {
                 await EmbedText("Queue is empty", false);
                 return;
+            } else if (player.PlayerState == PlayerState.Playing) {
+                builder.AddField(new EmbedFieldBuilder {
+                    Name = "Now Playing: ",
+                    Value = $"[{player.Track.Title}]({player.Track.Url})" +
+                            $"\n {player.Track.Position:hh\\:mm\\:ss} + / {player.Track.Duration}"
+                });
             }
-            
-            for (var i = 0; i < player.Queue.Count; i++) {
+
+
+            //Up next
+            builder.AddField(new EmbedFieldBuilder {
+                Name = "Next: ",
+                Value = $"[{player.Queue.ElementAt(0).Title}]({player.Queue.ElementAt(0).Url})" +
+                        $"\n {player.Queue.ElementAt(0).Duration.ToString()}"
+            });
+
+            //Remaining Queue
+            for (var i = 1; i < 4 && i < player.Queue.Count; i++) {
                 var lavaTrack = player.Queue.ElementAt(i);
-                var fieldBuilder = new EmbedFieldBuilder {Name = lavaTrack.Title, Value = lavaTrack.Duration};
+                var fieldBuilder = new EmbedFieldBuilder {
+                    Name = $"Queue position {i + 1}",
+                    Value = $"[{lavaTrack.Title}]({lavaTrack.Url})" +
+                            $"\n {lavaTrack.Duration.ToString()}"
+                };
                 builder.AddField(fieldBuilder);
             }
 
