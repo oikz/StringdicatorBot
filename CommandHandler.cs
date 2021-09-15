@@ -159,7 +159,11 @@ namespace Stringdicator {
             await _logFile.WriteLineAsync(
                 $"{DateTime.Now}: Message from {message.Author} in {channel.Name} was edited from {message} -> {newMessage}");
         }
-
+        
+        /// <summary>
+        /// Event called when the bot is ready to receive messages
+        /// Completes final LavaLink setup
+        /// </summary>
         private async Task HandleReady() {
             Console.WriteLine("Stringdicator is connected!");
             if (!_lavaNode.IsConnected) {
