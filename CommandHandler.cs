@@ -9,6 +9,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Victoria;
 
 namespace Stringdicator {
+    /// <summary>
+    /// CommandHandler for Stringdicator
+    /// Manages all incoming events from channels - Message events etc
+    /// </summary>
     public class CommandHandler {
         private readonly DiscordSocketClient _discordClient;
         private readonly CommandService _commands;
@@ -17,7 +21,12 @@ namespace Stringdicator {
         private readonly LavaNode _lavaNode;
 
 
-        // Retrieve client and CommandService instance via ctor
+        /// <summary>
+        /// Constructor for the CommandHandler to initialise the values needed to run
+        /// </summary>
+        /// <param name="client">This discord client object</param>
+        /// <param name="commands">The CommandService to be used</param>
+        /// <param name="services">The ServiceProvider to be used</param>
         public CommandHandler(DiscordSocketClient client, CommandService commands, ServiceProvider services) {
             _commands = commands;
             _discordClient = client;
@@ -25,6 +34,10 @@ namespace Stringdicator {
             _lavaNode = (LavaNode) _services.GetService(typeof(LavaNode));
         }
 
+        /// <summary>
+        /// Finish initialising the CommandHandler by adding modules to the CommandHandler and setting method calls
+        /// for event handling
+        /// </summary>
         public async Task InstallCommandsAsync() {
             _logFile = new StreamWriter("log.txt");
             // Hook the MessageReceived event into our command handler
@@ -40,9 +53,11 @@ namespace Stringdicator {
             await _discordClient.SetGameAsync("with String!");
         }
 
-        /**
-         * Do stuff with user commands
-         */
+        /// <summary>
+        /// React to normal Messages, usually commands
+        /// Also reacts to images etc. for Image Prediction
+        /// </summary>
+        /// <param name="messageParam">The message that was received</param>
         private async Task HandleCommandAsync(SocketMessage messageParam) {
             // Don't process the command if it was a system message
             if (!(messageParam is SocketUserMessage message)) return;
@@ -88,10 +103,13 @@ namespace Stringdicator {
                 _services);
         }
 
-
-        /**
-         * Do stuff when a message is deleted
-         */
+        
+        /// <summary>
+        /// Handles reacting to messages being deleted by users
+        /// </summary>
+        /// <param name="cachedMessage">The message that was deleted</param>
+        /// <param name="channel">The channel it was located in</param>
+        /// <returns>A Task</returns>
         private Task HandleMessageDelete(Cacheable<IMessage, ulong> cachedMessage, ISocketMessageChannel channel) {
             // check if the message exists in cache; if not, we cannot report what was removed
             if (!cachedMessage.HasValue) {
@@ -115,9 +133,12 @@ namespace Stringdicator {
             return Task.CompletedTask;
         }
 
-        /**
-         * Do stuff when a message is updated
-         */
+        /// <summary>
+        /// Handle messages being updated/edited by users 
+        /// </summary>
+        /// <param name="cachedMessage">The original message before being edited</param>
+        /// <param name="newMessage">The new message after being edited</param>
+        /// <param name="channel">The channel that the message was located in</param>
         private async Task HandleMessageUpdate(Cacheable<IMessage, ulong> cachedMessage, SocketMessage newMessage,
             ISocketMessageChannel channel) {
             // check if the message exists in cache; if not, we cannot report what was removed
