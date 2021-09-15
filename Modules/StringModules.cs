@@ -1,68 +1,24 @@
 ﻿using System;
 using System.Linq;
-using System.Reflection;
 using System.Threading.Tasks;
 using Discord;
 using Discord.Commands;
 using GoogleApi;
 using GoogleApi.Entities.Search;
 using GoogleApi.Entities.Search.Image.Request;
-using Microsoft.Extensions.DependencyInjection;
 
-namespace Stringdicator {
-    /**
-     * Basic help module that outputs available commands to users
-     */
-    public class HelpModule : ModuleBase<SocketCommandContext> {
-        private readonly ServiceProvider _serviceProvider;
+namespace Stringdicator.Modules {
 
-        public HelpModule(ServiceProvider serviceProvider) {
-            _serviceProvider = serviceProvider;
-        }
-
-        [Command("Stringdicator")]
-        [Summary("Outputs all commands")]
-        public async Task HelpAsync([Remainder] int offset = 1) {
-            //Kinda jank but gets all the commands again
-            var commands = new CommandService();
-            await commands.AddModulesAsync(Assembly.GetEntryAssembly(),
-                _serviceProvider);
-
-            //Embed builder
-            var builder = new EmbedBuilder();
-            builder.WithTitle($"All Stringdicator Commands. Page {offset}");
-            builder.WithThumbnailUrl("attachment://string.jpg");
-            builder.WithColor(3447003);
-            builder.WithDescription("");
-
-            offset = (offset - 1) * 5;
-            if (offset > commands.Commands.Count()) {
-                return;
-            }
-
-            //Add all commands, up to 5
-            for (var i = offset; i < offset + 5; i++) {
-                if (i >= commands.Commands.Count()) {
-                    break;
-                }
-
-                var command = commands.Commands.ElementAt(i);
-                var fieldBuilder = new EmbedFieldBuilder {Name = command.Name, Value = command.Summary};
-                builder.AddField(fieldBuilder);
-            }
-
-            await ReplyAsync("", false, builder.Build());
-        }
-    }
-
-
-    /**
-     * String! - Googles "ball of string" and returns one of the top 190 images
-     */
-    public class StringModule : ModuleBase<SocketCommandContext> {
+    /// <summary>
+    /// Module containing the String Image modules
+    /// </summary>
+    public class StringModules : ModuleBase<SocketCommandContext> {
+        /// <summary>
+        /// String! - Googles "ball of string" and returns one of the top 190 images
+        /// </summary>
         [Command("String")]
         [Summary("Finds a string image")]
-        public async Task StringAsync() {
+        private async Task StringAsync() {
             //Setup and send search request
             var request = new ImageSearchRequest();
             var random = new Random(); //Nice
@@ -97,15 +53,15 @@ namespace Stringdicator {
             await Context.Channel.SendMessageAsync("", false, builder.Build());
             Console.WriteLine("String! - " + item.Link + " " + (response.Query.StartIndex + index));
         }
-    }
 
-    /**
-     * StringSearch - Googles the search term and returns a random result from the top 10 images
-     */
-    public class StringSearchModule : ModuleBase<SocketCommandContext> {
+
+        /// <summary>
+        /// Google Image Searches for a given search term and sends an embedded message containing a random search result
+        /// </summary>
+        /// <param name="searchTerm">The string term to be searched</param>
         [Command("Stringsearch")]
         [Summary("Finds a searched image")]
-        public async Task StringAsync([Remainder] string searchTerm) {
+        private async Task StringAsync([Remainder] string searchTerm) {
             //Setup and send search request
             var request = new ImageSearchRequest {
                 Query = searchTerm,

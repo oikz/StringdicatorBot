@@ -7,23 +7,32 @@ using Victoria.Enums;
 using Victoria.EventArgs;
 using Victoria.Responses.Search;
 
-namespace Stringdicator {
+namespace Stringdicator.Modules {
     /**
     * Base play module for playing/queueing up songs
     * Joins the users channel and plays the specified url, then disconnects
     */
-    public class AudioModule : ModuleBase<SocketCommandContext> {
+    /// <summary>
+    /// Module containing all Music related commands
+    /// </summary>
+    public class MusicModule : ModuleBase<SocketCommandContext> {
         private readonly LavaNode _lavaNode;
 
-        public AudioModule(LavaNode lavaNode) {
+        /// <summary>
+        /// Constructor for music module to retrieve the lavaNode in use
+        /// Uses the lavaNode for retrieving/managing/playing audio to voice channels
+        /// </summary>
+        /// <param name="lavaNode">The lavaNode to be used for audio playback</param>
+        public MusicModule(LavaNode lavaNode) {
             _lavaNode = lavaNode;
             _lavaNode.OnTrackEnded += OnTrackEnded;
         }
 
-        /**
-         * Method called when the currently playing track ends
-         * Obtained mostly from the Victoria Tutorial pages
-         */
+        /// <summary>
+        /// The method called when a track ends
+        /// Obtained mostly from the Victoria Tutorial pages
+        /// </summary>
+        /// <param name="args">The information about the track that has ended</param>
         private async Task OnTrackEnded(TrackEndedEventArgs args) {
             if (args.Reason != TrackEndReason.Finished) {
                 return;
@@ -47,9 +56,10 @@ namespace Stringdicator {
         }
 
 
-        /**
-         * Join the voice channel that the user is currently in
-         */
+        /// <summary>
+        /// Command for joining the voice channel that a user is currently in
+        /// If the user is not currently in a channel, will embed an "error message"
+        /// </summary>
         [Command("StringJoin")]
         [Summary("Join the voice channel that the user is currently in")]
         private async Task JoinAsync() {
@@ -64,9 +74,10 @@ namespace Stringdicator {
             await _lavaNode.JoinAsync(voiceState.VoiceChannel, Context.Channel as ITextChannel);
         }
 
-        /**
-         * Leave the voice channel that the user is currently in
-         */
+        /// <summary>
+        /// Leave the voice channel that the user is currently in
+        /// If the user is not currently in a channel, does nothing
+        /// </summary>
         [Command("StringLeave")]
         [Summary("Leave the voice channel that the user is currently in")]
         private async Task LeaveAsync() {
@@ -82,12 +93,13 @@ namespace Stringdicator {
             }
         }
 
-        /**
-         * Play a song or queue up a song
-         */
+        /// <summary>
+        /// Play a track or if one is already being played, add it to the queue
+        /// </summary>
+        /// <param name="searchQuery">The user's track search query</param>
         [Command("StringPlay", RunMode = RunMode.Async)]
         [Summary("Play a song or queue up a song")]
-        public async Task PlayAsync([Remainder] string searchQuery) {
+        private async Task PlayAsync([Remainder] string searchQuery) {
             if (!UserInVoice().Result) {
                 return;
             }
@@ -133,7 +145,8 @@ namespace Stringdicator {
                     for (var i = 0; i < searchResponse.Tracks.Count; i++) {
                         if (i == 0) {
                             await player.PlayAsync(track);
-                            await EmbedText($"Now Playing: {track.Title}", true, TrimTime(track.Duration.ToString(@"dd\:hh\:mm\:ss")),
+                            await EmbedText($"Now Playing: {track.Title}", true,
+                                "Duration: " + TrimTime(track.Duration.ToString(@"dd\:hh\:mm\:ss")),
                                 track.FetchArtworkAsync().Result, true);
                         } else {
                             player.Queue.Enqueue(searchResponse.Tracks.ElementAt(i));
@@ -146,16 +159,17 @@ namespace Stringdicator {
                 } else {
                     //Single Song queueing
                     await player.PlayAsync(track);
-                    await EmbedText($"Now Playing: {track.Title}", true, TrimTime(track.Duration.ToString(@"dd\:hh\:mm\:ss")),
+                    await EmbedText($"Now Playing: {track.Title}", true,
+                        "Duration: " + TrimTime(track.Duration.ToString(@"dd\:hh\:mm\:ss")),
                         track.FetchArtworkAsync().Result);
                 }
             }
         }
 
 
-        /**
-         * Skip the current song
-         */
+        /// <summary>
+        /// Skips the currently playing song
+        /// </summary>
         [Command("StringSkip")]
         [Summary("Skips the currently playing song")]
         private async Task SkipAsync() {
@@ -163,6 +177,7 @@ namespace Stringdicator {
                 return;
             }
 
+            if (!_lavaNode.HasPlayer(Context.Guild)) return;
             var player = _lavaNode.GetPlayer(Context.Guild);
             await EmbedText("Song Skipped: ", true, player.Track.Title, player.Track.FetchArtworkAsync().Result);
             if (!player.Queue.Any()) {
@@ -172,9 +187,11 @@ namespace Stringdicator {
             }
         }
 
-        /**
-         * Remove a song from the queue
-         */
+
+        /// <summary>
+        /// Removes a specified song from the queue
+        /// </summary>
+        /// <param name="index">The index in the queue that the user wishes to skip</param>
         [Command("StringSkip")]
         [Summary("Skips a specified song in the queue")]
         private async Task RemoveFromQueueAsync([Remainder] int index) {
@@ -182,6 +199,7 @@ namespace Stringdicator {
                 return;
             }
 
+            if (!_lavaNode.HasPlayer(Context.Guild)) return;
             var player = _lavaNode.GetPlayer(Context.Guild);
             if (player.Queue.Count < index - 1) {
                 await EmbedText("Index is longer than the queue length", false);
@@ -193,45 +211,54 @@ namespace Stringdicator {
             player.Queue.RemoveAt(index - 1);
         }
 
-        /**
-         * Pause the song currently playing
-         */
+        /// <summary>
+        /// Pause the currently playing track
+        /// </summary>
         [Command("StringPause")]
-        [Summary("Pause the currently playing song")]
+        [Summary("Pause the currently playing track")]
         private async Task PauseAsync() {
             if (!UserInVoice().Result) {
                 return;
             }
+
+            if (!_lavaNode.HasPlayer(Context.Guild)) return;
 
             var player = _lavaNode.GetPlayer(Context.Guild);
             await player.PauseAsync();
             await EmbedText("Paused", false);
         }
 
-        /**
-         * Resume the currently playing song
-         */
+
+        /// <summary>
+        /// Resume the currently playing track
+        /// </summary>
         [Command("StringResume")]
-        [Summary("Resume the currently playing song")]
+        [Summary("Resume the currently playing track")]
         private async Task ResumeAsync() {
             if (!UserInVoice().Result) {
                 return;
             }
+
+            if (!_lavaNode.HasPlayer(Context.Guild)) return;
+            if (!_lavaNode.GetPlayer(Context.Guild).PlayerState.Equals(PlayerState.Playing)) return;
 
             var player = _lavaNode.GetPlayer(Context.Guild);
             await player.ResumeAsync();
             await EmbedText("Resumed", false);
         }
 
-        /**
-         * Show the song currently playing
-         */
-        [Command("StringSong")]
-        [Summary("Show the currently playing song")]
+
+        /// <summary>
+        /// Show the track that is currently being played in this voice channel
+        /// </summary>
+        [Command("StringPlaying")]
+        [Summary("Show the currently playing track")]
         private async Task CurrentSongAsync() {
             if (!UserInVoice().Result) {
                 return;
             }
+
+            if (!_lavaNode.HasPlayer(Context.Guild)) return;
 
             var player = _lavaNode.GetPlayer(Context.Guild);
             if (player.PlayerState == PlayerState.None) {
@@ -244,19 +271,18 @@ namespace Stringdicator {
                 player.Track.FetchArtworkAsync().Result);
         }
 
-        /**
-         * Display the current queue
-         */
+
+        /// <summary>
+        /// Display the current queue of tracks
+        /// </summary>
         [Command("StringQueue")]
-        [Summary("Display the current song queue")]
+        [Summary("Display the current track queue")]
         private async Task QueueAsync() {
             if (!UserInVoice().Result) {
                 return;
             }
 
-            if (!_lavaNode.HasPlayer(Context.Guild)) {
-                return;
-            }
+            if (!_lavaNode.HasPlayer(Context.Guild)) return;
 
             var player = _lavaNode.GetPlayer(Context.Guild);
 
@@ -306,6 +332,14 @@ namespace Stringdicator {
             await ReplyAsync("", false, builder.Build());
         }
 
+        /// <summary>
+        /// Embed and send a message with the provided parameters
+        /// </summary>
+        /// <param name="title">The title of the embed to send</param>
+        /// <param name="hasThumbnail">True if the embed should contain a thumbnail</param>
+        /// <param name="description">The description of the embed to send</param>
+        /// <param name="thumbnail">The thumbnail URL to be used by the embed, defaults to empty (use bot's avatar)</param>
+        /// <param name="hasAuthor">True if the embed should contain an Author field</param>
         private async Task EmbedText(string title, bool hasThumbnail = true, string description = "",
             string thumbnail = "", bool hasAuthor = false) {
             var builder = new EmbedBuilder();
@@ -320,9 +354,10 @@ namespace Stringdicator {
             await ReplyAsync("", false, builder.Build());
         }
 
-        /**
-         * Check if the bot is in a voice channel
-         */
+        /// <summary>
+        /// Check if the user sending the command is in a voice channel
+        /// </summary>
+        /// <returns>A Task with result true if the user is in a channel</returns>
         private async Task<bool> UserInVoice() {
             var voiceState = Context.User as IVoiceState;
             if (voiceState?.VoiceChannel != null) return true;
@@ -330,19 +365,25 @@ namespace Stringdicator {
             return false;
         }
 
-        /**
-         * Trim the start of the time string to remove any leading "00:" sections
-         */
+        /// <summary>
+        /// Trim the start of the time string to remove any leading "00:" sections
+        /// Leaves at least 0:XX as a default
+        /// </summary>
+        /// <param name="time">The string time to be trimmed</param>
+        /// <returns>A trimmed string containing nice formatting</returns>
         private static string TrimTime(string time) {
             if (time.StartsWith("00:")) {
                 time = time.TrimStart('0', ':');
             }
 
-            //Always have at least minutes and seconds displayed
-            if (time.Length <= 2) {
-                time = "0:" + time;
-            }
-            
+            time = time.Length switch {
+                //Always have at least minutes and seconds displayed
+                2 => "0:" + time,
+                1 => "0:0" + time,
+                0 => "0:00" + time,
+                _ => time
+            };
+
             return time;
         }
     }
