@@ -212,6 +212,23 @@ namespace Stringdicator.Modules {
         }
 
         /// <summary>
+        /// Command for clearing the current track queue
+        /// </summary>
+        [Command("StringClear")]
+        [Summary("Clear the current track queue")]
+        private async Task ClearQueueAsync() {
+            if (!UserInVoice().Result) {
+                return;
+            }
+            
+            if (!_lavaNode.HasPlayer(Context.Guild)) return;
+            var player = _lavaNode.GetPlayer(Context.Guild);
+            
+            player.Queue.Clear();
+            await EmbedText("Queue Cleared", false);
+        }
+
+        /// <summary>
         /// Pause the currently playing track
         /// </summary>
         [Command("StringPause")]
