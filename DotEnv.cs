@@ -9,8 +9,8 @@ namespace Stringdicator {
                 return;
             }
 
-            foreach (string line in File.ReadAllLines(filePath)) {
-                string[] parts = line.Split(
+            foreach (var line in File.ReadAllLines(filePath)) {
+                var parts = line.Split(
                     '=',
                     StringSplitOptions.RemoveEmptyEntries);
 

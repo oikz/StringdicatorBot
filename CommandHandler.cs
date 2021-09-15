@@ -14,7 +14,7 @@ namespace Stringdicator {
         private readonly CommandService _commands;
         private StreamWriter _logFile;
         private readonly ServiceProvider _services;
-        private LavaNode _lavaNode;
+        private readonly LavaNode _lavaNode;
 
 
         // Retrieve client and CommandService instance via ctor
@@ -83,9 +83,9 @@ namespace Stringdicator {
             // Execute the command with the command context we just
             // created, along with the service provider for precondition checks.
             await _commands.ExecuteAsync(
-                context: context,
-                argPos: startPos,
-                services: _services);
+                context,
+                startPos,
+                _services);
         }
 
 
