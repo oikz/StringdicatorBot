@@ -12,10 +12,12 @@ using Discord.Commands;
 
 namespace Stringdicator {
     public static class ImagePrediction {
-        /**
-         * Handles setup for the image classification prediction 
-         * Take a given file url/attachment and set it up for Custom Vision prediction
-         */
+        /// <summary>
+        /// Handles setup for the image classification prediction
+        /// Take a given file url/attachment and set it up for Custom Vision prediction
+        /// </summary>
+        /// <param name="attachmentUrl">The url of the attachment to be sent for prediction</param>
+        /// <param name="context">The Context of the message, used for replying to the user</param>
         public static void MakePrediction(string attachmentUrl, SocketCommandContext context) {
             //Trim the end of urls as some can contain extra characters after the filename
             attachmentUrl = attachmentUrl switch {
@@ -52,10 +54,12 @@ namespace Stringdicator {
             MakePredictionRequest(filename, context).Wait();
         }
 
-        /**
-         * Handles the prediction of image classification when a user uploads an image
-         * Mostly taken from the Microsoft Docs for Custom Vision
-         */
+        /// <summary>
+        /// Handles the prediction of image classification when a user uploads an image
+        /// Mostly taken from the Microsoft Docs for Custom Vision
+        /// </summary>
+        /// <param name="imageFilePath">The filepath of the image to be sent</param>
+        /// <param name="context">The Context of the message, used for replying to the user</param>
         private static async Task MakePredictionRequest(string imageFilePath, SocketCommandContext context) {
             var client = new HttpClient();
 
@@ -100,11 +104,13 @@ namespace Stringdicator {
             }
         }
 
-
-        /**
-         * Also taken from Microsoft Docs
-         * Takes the image into a byte array for sending to Custom Vision for prediction
-         */
+        
+        /// <summary>
+        /// Also taken from Microsoft Docs
+        /// Takes the image into a byte array for sending to Custom Vision for prediction
+        /// </summary>
+        /// <param name="imageFilePath">The filepath of the image to be turned into bytes</param>
+        /// <returns>An array of bytes to be sent to the Custom Vision endpoint</returns>
         private static byte[] GetImageAsByteArray(string imageFilePath) {
             var fileStream = new FileStream(imageFilePath, FileMode.Open, FileAccess.Read);
             var binaryReader = new BinaryReader(fileStream);
