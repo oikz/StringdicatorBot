@@ -164,8 +164,12 @@ namespace Stringdicator {
             }
 
             var player = _lavaNode.GetPlayer(Context.Guild);
-            await EmbedText("Song Skipped: " + player.Track.Title, true, "", player.Track.FetchArtworkAsync().Result);
-            await player.SkipAsync();
+            await EmbedText("Song Skipped: ", true, player.Track.Title, player.Track.FetchArtworkAsync().Result);
+            if (!player.Queue.Any()) {
+                await player.StopAsync();
+            } else {
+                await player.SkipAsync();
+            }
         }
 
         /**
@@ -184,7 +188,7 @@ namespace Stringdicator {
                 return;
             }
 
-            await EmbedText("Song Skipped: " + player.Queue.ElementAt(index - 1).Title, true, "",
+            await EmbedText("Song Skipped: ", true, player.Queue.ElementAt(index - 1).Title,
                 player.Queue.ElementAt(index - 1).FetchArtworkAsync().Result);
             player.Queue.RemoveAt(index - 1);
         }
@@ -332,6 +336,11 @@ namespace Stringdicator {
         private static string TrimTime(string time) {
             if (time.StartsWith("00:")) {
                 time = time.TrimStart('0', ':');
+            }
+
+            //Always have at least minutes and seconds displayed
+            if (time.Length <= 2) {
+                time = "0:" + time;
             }
             
             return time;
