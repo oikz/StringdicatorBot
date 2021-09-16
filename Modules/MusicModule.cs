@@ -123,8 +123,10 @@ namespace Stringdicator.Modules {
                 await JoinAsync();
             }
 
+            var searchType = searchQuery.Contains("youtube.com/") ? SearchType.Direct : SearchType.YouTube;
+
             //Find the search result from the search terms
-            var searchResponse = await _lavaNode.SearchAsync(SearchType.YouTube, searchQuery);
+            var searchResponse = await _lavaNode.SearchAsync(searchType, searchQuery);
             if (searchResponse.Status == SearchStatus.LoadFailed ||
                 searchResponse.Status == SearchStatus.NoMatches) {
                 await EmbedText($"I wasn't able to find anything for `{searchQuery}`.", false);
@@ -141,7 +143,9 @@ namespace Stringdicator.Modules {
                         player.Queue.Enqueue(track);
                     }
 
-                    await EmbedText($"{searchResponse.Tracks.Count} tracks added to queue");
+                    await EmbedText($"{searchResponse.Tracks.Count} tracks added to queue", true,
+                        searchResponse.Playlist.Name, searchResponse.Tracks.ElementAt(0).FetchArtworkAsync().Result,
+                        true);
                 } else {
                     //Single song queueing
                     var track = searchResponse.Tracks.ElementAt(0);
@@ -168,8 +172,8 @@ namespace Stringdicator.Modules {
                     }
 
                     await EmbedText($"{searchResponse.Tracks.Count} tracks added to queue", true,
-                        TrimTime(track.Duration.ToString(@"dd\:hh\:mm\:ss")),
-                        await track.FetchArtworkAsync());
+                        searchResponse.Playlist.Name, searchResponse.Tracks.ElementAt(0).FetchArtworkAsync().Result,
+                        true);
                 } else {
                     //Single Song queueing
                     await player.PlayAsync(track);
@@ -332,7 +336,7 @@ namespace Stringdicator.Modules {
 
             //Create an embed using that image url
             var builder = new EmbedBuilder();
-            builder.WithTitle("String Music Queue");
+            builder.WithTitle($"String Music Queue - Length: {player.Queue.Count}");
             builder.WithThumbnailUrl(await player.Track.FetchArtworkAsync());
             builder.WithColor(3447003);
             builder.WithDescription("");
