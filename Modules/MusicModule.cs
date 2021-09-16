@@ -62,6 +62,7 @@ namespace Stringdicator.Modules {
         /// </summary>
         [Command("StringJoin")]
         [Summary("Join the voice channel that the user is currently in")]
+        [Alias("SJ")]
         private async Task JoinAsync() {
             //Check if the user is in a voice channel
             if (!UserInVoice().Result) {
@@ -80,6 +81,7 @@ namespace Stringdicator.Modules {
         /// </summary>
         [Command("StringLeave")]
         [Summary("Leave the voice channel that the user is currently in")]
+        [Alias("SL")]
         private async Task LeaveAsync() {
             var voiceState = Context.User as IVoiceState;
             if (voiceState?.VoiceChannel == null) {
@@ -99,6 +101,7 @@ namespace Stringdicator.Modules {
         /// <param name="searchQuery">The user's track search query</param>
         [Command("StringPlay", RunMode = RunMode.Async)]
         [Summary("Play a song or queue up a song")]
+        [Alias("SP")]
         private async Task PlayAsync([Remainder] string searchQuery) {
             if (!UserInVoice().Result) {
                 return;
@@ -172,6 +175,7 @@ namespace Stringdicator.Modules {
         /// </summary>
         [Command("StringSkip")]
         [Summary("Skips the currently playing song")]
+        [Alias("SS")]
         private async Task SkipAsync() {
             if (!UserInVoice().Result) {
                 return;
@@ -194,6 +198,7 @@ namespace Stringdicator.Modules {
         /// <param name="index">The index in the queue that the user wishes to skip</param>
         [Command("StringSkip")]
         [Summary("Skips a specified song in the queue")]
+        [Alias("SS")]
         private async Task RemoveFromQueueAsync([Remainder] int index) {
             if (!UserInVoice().Result) {
                 return;
@@ -216,6 +221,7 @@ namespace Stringdicator.Modules {
         /// </summary>
         [Command("StringClear")]
         [Summary("Clear the current track queue")]
+        [Alias("SC")]
         private async Task ClearQueueAsync() {
             if (!UserInVoice().Result) {
                 return;
@@ -233,6 +239,7 @@ namespace Stringdicator.Modules {
         /// </summary>
         [Command("StringPause")]
         [Summary("Pause the currently playing track")]
+        [Alias("SPS")]
         private async Task PauseAsync() {
             if (!UserInVoice().Result) {
                 return;
@@ -251,6 +258,7 @@ namespace Stringdicator.Modules {
         /// </summary>
         [Command("StringResume")]
         [Summary("Resume the currently playing track")]
+        [Alias("SR")]
         private async Task ResumeAsync() {
             if (!UserInVoice().Result) {
                 return;
@@ -268,8 +276,9 @@ namespace Stringdicator.Modules {
         /// <summary>
         /// Show the track that is currently being played in this voice channel
         /// </summary>
-        [Command("StringPlaying")]
+        [Command("StringNowPlaying")]
         [Summary("Show the currently playing track")]
+        [Alias("SNP")]
         private async Task CurrentSongAsync() {
             if (!UserInVoice().Result) {
                 return;
@@ -294,6 +303,7 @@ namespace Stringdicator.Modules {
         /// </summary>
         [Command("StringQueue")]
         [Summary("Display the current track queue")]
+        [Alias("SQ")]
         private async Task QueueAsync() {
             if (!UserInVoice().Result) {
                 return;

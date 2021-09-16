@@ -27,7 +27,8 @@ namespace Stringdicator.Modules {
         /// </summary>
         /// <param name="offset">The page number the user wishes to view</param>
         [Command("Stringdicator")]
-        [Summary("Outputs all commands")]
+        [Summary("Outputs all commands with an optional page number argument")]
+        [Alias("StringHelp")]
         private async Task HelpAsync([Remainder] int offset = 1) {
             //Kinda jank but gets all the commands again
             var commands = new CommandService();
