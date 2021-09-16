@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using System.Reflection;
+using System.Text;
 using System.Threading.Tasks;
 using Discord;
 using Discord.Commands;
@@ -54,7 +55,23 @@ namespace Stringdicator.Modules {
                 }
 
                 var command = commands.Commands.ElementAt(i);
-                var fieldBuilder = new EmbedFieldBuilder {Name = command.Name, Value = command.Summary};
+                
+                //Get all the aliases for each command and output them next to the title of the command
+                var aliasBuilder = new StringBuilder();
+                foreach (var alias in command.Aliases) {
+                    if (alias.Equals(command.Name.ToLower())) continue;
+                    if (aliasBuilder.ToString() == "") {
+                        aliasBuilder.Append(alias);
+                        continue;
+                    }
+
+                    aliasBuilder.Append($", {alias}");
+                }
+                //Add square brackets around any aliases
+                var aliases = aliasBuilder.ToString().Any() ? $"[{aliasBuilder}]" : "";
+                
+                
+                var fieldBuilder = new EmbedFieldBuilder {Name = $"{command.Name} {aliases}", Value = command.Summary};
                 builder.AddField(fieldBuilder);
             }
 
