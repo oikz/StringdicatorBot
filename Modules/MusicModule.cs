@@ -45,13 +45,13 @@ namespace Stringdicator.Modules {
             }
 
             //General Error case for queue
-            if (!(queueable is { } track)) {
+            if (queueable == null) {
                 await player.TextChannel.SendMessageAsync("Next item in queue is not a track.");
                 return;
             }
 
             //Play the song and output whats being played
-            await args.Player.PlayAsync(track);
+            await args.Player.PlayAsync(queueable);
             await CurrentSongAsync();
         }
 
@@ -265,7 +265,7 @@ namespace Stringdicator.Modules {
             }
 
             if (!_lavaNode.HasPlayer(Context.Guild)) return;
-            if (!_lavaNode.GetPlayer(Context.Guild).PlayerState.Equals(PlayerState.Playing)) return;
+            if (_lavaNode.GetPlayer(Context.Guild).PlayerState.Equals(PlayerState.Playing)) return;
 
             var player = _lavaNode.GetPlayer(Context.Guild);
             await player.ResumeAsync();
@@ -326,9 +326,9 @@ namespace Stringdicator.Modules {
             builder.WithColor(3447003);
             builder.WithDescription("");
 
-            if (player.PlayerState == PlayerState.Playing && player.Queue.Count == 0) {
+            if (player.Queue.Count == 0) {
                 await CurrentSongAsync();
-            } else if (player.PlayerState == PlayerState.Playing) {
+            } else {
                 builder.AddField(new EmbedFieldBuilder {
                     Name = "Now Playing: ",
                     Value = $"[{player.Track.Title}]({player.Track.Url})" +
