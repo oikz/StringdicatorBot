@@ -34,7 +34,8 @@ namespace Stringdicator.Modules {
         /// </summary>
         /// <param name="args">The information about the track that has ended</param>
         private async Task OnTrackEnded(TrackEndedEventArgs args) {
-            if (args.Reason != TrackEndReason.Finished) {
+            if (args.Reason != TrackEndReason.Finished || args.Player.PlayerState != PlayerState.Stopped ||
+                args.Track == null) {
                 return;
             }
 
@@ -52,7 +53,17 @@ namespace Stringdicator.Modules {
 
             //Play the song and output whats being played
             await args.Player.PlayAsync(queueable);
-            await CurrentSongAsync();
+
+            var builder = new EmbedBuilder {
+                Title = "Now Playing: ",
+                Description = $"[{player.Track.Title}]({player.Track.Url})" +
+                              $"\n {TrimTime(queueable.Position.ToString(@"dd\:hh\:mm\:ss"))} / " +
+                              $"{TrimTime(queueable.Duration.ToString(@"dd\:hh\:mm\:ss"))}",
+                ThumbnailUrl = await queueable.FetchArtworkAsync(),
+                Color = new Color(3447003)
+            };
+            //Output now playing message
+            await player.TextChannel.SendMessageAsync("", false, builder.Build());
         }
 
 
@@ -136,7 +147,7 @@ namespace Stringdicator.Modules {
                     var track = searchResponse.Tracks.ElementAt(0);
                     player.Queue.Enqueue(track);
                     await EmbedText($"{track.Title}", true, TrimTime(track.Duration.ToString(@"dd\:hh\:mm\:ss")),
-                        track.FetchArtworkAsync().Result, true);
+                        await track.FetchArtworkAsync(), true);
                 }
 
                 //Play this song now
@@ -150,7 +161,7 @@ namespace Stringdicator.Modules {
                             await player.PlayAsync(track);
                             await EmbedText($"Now Playing: {track.Title}", true,
                                 "Duration: " + TrimTime(track.Duration.ToString(@"dd\:hh\:mm\:ss")),
-                                track.FetchArtworkAsync().Result, true);
+                                await track.FetchArtworkAsync(), true);
                         } else {
                             player.Queue.Enqueue(searchResponse.Tracks.ElementAt(i));
                         }
@@ -158,13 +169,13 @@ namespace Stringdicator.Modules {
 
                     await EmbedText($"{searchResponse.Tracks.Count} tracks added to queue", true,
                         TrimTime(track.Duration.ToString(@"dd\:hh\:mm\:ss")),
-                        track.FetchArtworkAsync().Result);
+                        await track.FetchArtworkAsync());
                 } else {
                     //Single Song queueing
                     await player.PlayAsync(track);
                     await EmbedText($"Now Playing: {track.Title}", true,
                         "Duration: " + TrimTime(track.Duration.ToString(@"dd\:hh\:mm\:ss")),
-                        track.FetchArtworkAsync().Result);
+                        await track.FetchArtworkAsync());
                 }
             }
         }
@@ -183,7 +194,7 @@ namespace Stringdicator.Modules {
 
             if (!_lavaNode.HasPlayer(Context.Guild)) return;
             var player = _lavaNode.GetPlayer(Context.Guild);
-            await EmbedText("Song Skipped: ", true, player.Track.Title, player.Track.FetchArtworkAsync().Result);
+            await EmbedText("Song Skipped: ", true, player.Track.Title, await player.Track.FetchArtworkAsync());
             if (!player.Queue.Any()) {
                 await player.StopAsync();
             } else {
@@ -226,10 +237,10 @@ namespace Stringdicator.Modules {
             if (!UserInVoice().Result) {
                 return;
             }
-            
+
             if (!_lavaNode.HasPlayer(Context.Guild)) return;
             var player = _lavaNode.GetPlayer(Context.Guild);
-            
+
             player.Queue.Clear();
             await EmbedText("Queue Cleared", false);
         }
@@ -294,7 +305,7 @@ namespace Stringdicator.Modules {
             await EmbedText("Now Playing: ", true, $"[{player.Track.Title}]({player.Track.Url})" +
                                                    $"\n {TrimTime(player.Track.Position.ToString(@"dd\:hh\:mm\:ss"))} / " +
                                                    $"{TrimTime(player.Track.Duration.ToString(@"dd\:hh\:mm\:ss"))}",
-                player.Track.FetchArtworkAsync().Result);
+                await player.Track.FetchArtworkAsync());
         }
 
 
@@ -322,20 +333,22 @@ namespace Stringdicator.Modules {
             //Create an embed using that image url
             var builder = new EmbedBuilder();
             builder.WithTitle("String Music Queue");
-            builder.WithThumbnailUrl(player.Track.FetchArtworkAsync().Result);
+            builder.WithThumbnailUrl(await player.Track.FetchArtworkAsync());
             builder.WithColor(3447003);
             builder.WithDescription("");
 
             if (player.Queue.Count == 0) {
                 await CurrentSongAsync();
-            } else {
-                builder.AddField(new EmbedFieldBuilder {
-                    Name = "Now Playing: ",
-                    Value = $"[{player.Track.Title}]({player.Track.Url})" +
-                            $"\n {TrimTime(player.Track.Position.ToString(@"dd\:hh\:mm\:ss"))} " +
-                            $"/ {TrimTime(player.Track.Duration.ToString(@"dd\:hh\:mm\:ss"))}"
-                });
+                return;
             }
+
+            //Now playing
+            builder.AddField(new EmbedFieldBuilder {
+                Name = "Now Playing: ",
+                Value = $"[{player.Track.Title}]({player.Track.Url})" +
+                        $"\n {TrimTime(player.Track.Position.ToString(@"dd\:hh\:mm\:ss"))} " +
+                        $"/ {TrimTime(player.Track.Duration.ToString(@"dd\:hh\:mm\:ss"))}"
+            });
 
 
             //Up next
@@ -344,6 +357,7 @@ namespace Stringdicator.Modules {
                 Value = $"[{player.Queue.ElementAt(0).Title}]({player.Queue.ElementAt(0).Url})" +
                         $"\n {TrimTime(player.Queue.ElementAt(0).Duration.ToString(@"dd\:hh\:mm\:ss"))}"
             });
+
 
             //Remaining Queue
             for (var i = 1; i < 4 && i < player.Queue.Count; i++) {
