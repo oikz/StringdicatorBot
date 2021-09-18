@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Discord;
 using Discord.Commands;
@@ -137,50 +138,106 @@ namespace Stringdicator.Modules {
             var player = _lavaNode.GetPlayer(Context.Guild);
             //Queue up next song
             if (player.PlayerState == PlayerState.Playing || player.PlayerState == PlayerState.Paused) {
-                //Playlist queueing
-                if (!string.IsNullOrWhiteSpace(searchResponse.Playlist.Name)) {
-                    foreach (var track in searchResponse.Tracks) {
-                        player.Queue.Enqueue(track);
-                    }
-
-                    await EmbedText($"{searchResponse.Tracks.Count} tracks added to queue", true,
-                        searchResponse.Playlist.Name, searchResponse.Tracks.ElementAt(0).FetchArtworkAsync().Result,
-                        true);
-                } else {
-                    //Single song queueing
-                    var track = searchResponse.Tracks.ElementAt(0);
-                    player.Queue.Enqueue(track);
-                    await EmbedText($"{track.Title}", true, TrimTime(track.Duration.ToString(@"dd\:hh\:mm\:ss")),
-                        await track.FetchArtworkAsync(), true);
-                }
-
+                await QueueNow(searchResponse, player, false);
                 //Play this song now
             } else {
-                var track = searchResponse.Tracks.ElementAt(0);
+                await PlayNow(searchResponse, player);
+            }
+        }
 
-                //Play list queueing
-                if (!string.IsNullOrWhiteSpace(searchResponse.Playlist.Name)) {
-                    for (var i = 0; i < searchResponse.Tracks.Count; i++) {
-                        if (i == 0) {
-                            await player.PlayAsync(track);
-                            await EmbedText($"Now Playing: {track.Title}", true,
-                                "Duration: " + TrimTime(track.Duration.ToString(@"dd\:hh\:mm\:ss")),
-                                await track.FetchArtworkAsync(), true);
-                        } else {
-                            player.Queue.Enqueue(searchResponse.Tracks.ElementAt(i));
-                        }
-                    }
+        /// <summary>
+        /// Add a track to the top of the queue
+        /// </summary>
+        /// <param name="searchQuery">The user's track search query</param>
+        [Command("StringPlayTop", RunMode = RunMode.Async)]
+        [Summary("Adds a specified track to the top of the current queue")]
+        [Alias("SPT")]
+        private async Task PlayTopAsync([Remainder] string searchQuery) {
+            if (!UserInVoice().Result) {
+                return;
+            }
 
-                    await EmbedText($"{searchResponse.Tracks.Count} tracks added to queue", true,
-                        searchResponse.Playlist.Name, searchResponse.Tracks.ElementAt(0).FetchArtworkAsync().Result,
-                        true);
-                } else {
-                    //Single Song queueing
-                    await player.PlayAsync(track);
-                    await EmbedText($"Now Playing: {track.Title}", true,
-                        "Duration: " + TrimTime(track.Duration.ToString(@"dd\:hh\:mm\:ss")),
-                        await track.FetchArtworkAsync());
+            //Join the voice channel if not already in it
+            if (!_lavaNode.HasPlayer(Context.Guild)) {
+                await JoinAsync();
+            }
+
+            var searchType = searchQuery.Contains("youtube.com/") ? SearchType.Direct : SearchType.YouTube;
+
+            //Find the search result from the search terms
+            var searchResponse = await _lavaNode.SearchAsync(searchType, searchQuery);
+            if (searchResponse.Status == SearchStatus.LoadFailed ||
+                searchResponse.Status == SearchStatus.NoMatches) {
+                await EmbedText($"I wasn't able to find anything for `{searchQuery}`.", false);
+                return;
+            }
+
+            var player = _lavaNode.GetPlayer(Context.Guild);
+            await QueueNow(searchResponse, player, true);
+        }
+
+        /// <summary>
+        /// Helper method for queuing one or more songs based on the search terms
+        /// </summary>
+        /// <param name="searchResponse">The response received from the user's search</param>
+        /// <param name="player">The LavaPlayer that should queue this track</param>
+        private async Task QueueNow(SearchResponse searchResponse, LavaPlayer player, bool insertAtTop) {
+            var test = new List<LavaTrack>();
+            if (insertAtTop) {
+                test.AddRange(player.Queue.RemoveRange(0, player.Queue.Count));
+                player.Queue.Clear();
+            }
+
+            //Playlist queueing
+            if (!string.IsNullOrWhiteSpace(searchResponse.Playlist.Name)) {
+                foreach (var track in searchResponse.Tracks) {
+                    player.Queue.Enqueue(track);
                 }
+
+                await EmbedText($"{searchResponse.Tracks.Count} tracks added to queue", true,
+                    searchResponse.Playlist.Name, await searchResponse.Tracks.ElementAt(0).FetchArtworkAsync(),
+                    true);
+            } else {
+                //Single song queueing
+                var track = searchResponse.Tracks.ElementAt(0);
+                player.Queue.Enqueue(track);
+                await EmbedText($"{track.Title}", true, TrimTime(track.Duration.ToString(@"dd\:hh\:mm\:ss")),
+                    await track.FetchArtworkAsync(), true);
+            }
+
+            player.Queue.Enqueue(test);
+        }
+
+        /// <summary>
+        /// Helper method for playing one or more songs based on the search terms
+        /// </summary>
+        /// <param name="searchResponse">The response received from the user's search</param>
+        /// <param name="player">The LavaPlayer that should play this track</param>
+        private async Task PlayNow(SearchResponse searchResponse, LavaPlayer player) {
+            var track = searchResponse.Tracks.ElementAt(0);
+
+            //Play list queueing
+            if (!string.IsNullOrWhiteSpace(searchResponse.Playlist.Name)) {
+                for (var i = 0; i < searchResponse.Tracks.Count; i++) {
+                    if (i == 0) {
+                        await player.PlayAsync(track);
+                        await EmbedText($"Now Playing: {track.Title}", true,
+                            "Duration: " + TrimTime(track.Duration.ToString(@"dd\:hh\:mm\:ss")),
+                            await track.FetchArtworkAsync(), true);
+                    } else {
+                        player.Queue.Enqueue(searchResponse.Tracks.ElementAt(i));
+                    }
+                }
+
+                await EmbedText($"{searchResponse.Tracks.Count} tracks added to queue", true,
+                    searchResponse.Playlist.Name, await searchResponse.Tracks.ElementAt(0).FetchArtworkAsync(),
+                    true);
+            } else {
+                //Single Song queueing
+                await player.PlayAsync(track);
+                await EmbedText($"Now Playing: {track.Title}", true,
+                    "Duration: " + TrimTime(track.Duration.ToString(@"dd\:hh\:mm\:ss")),
+                    await track.FetchArtworkAsync());
             }
         }
 
@@ -227,7 +284,7 @@ namespace Stringdicator.Modules {
             }
 
             await EmbedText("Song Skipped: ", true, player.Queue.ElementAt(index - 1).Title,
-                player.Queue.ElementAt(index - 1).FetchArtworkAsync().Result);
+                await player.Queue.ElementAt(index - 1).FetchArtworkAsync());
             player.Queue.RemoveAt(index - 1);
         }
 
