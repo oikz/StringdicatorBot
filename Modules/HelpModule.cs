@@ -39,7 +39,7 @@ namespace Stringdicator.Modules {
             //Embed builder
             var builder = new EmbedBuilder();
             builder.WithTitle($"All Stringdicator Commands. Page {offset}");
-            builder.WithThumbnailUrl("attachment://string.jpg");
+            builder.WithThumbnailUrl(Context.Client.CurrentUser.GetAvatarUrl());
             builder.WithColor(3447003);
             builder.WithDescription("");
 
