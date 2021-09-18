@@ -19,12 +19,13 @@ namespace Stringdicator {
         private Stringdicator() {
             _discordClient = new DiscordSocketClient(new DiscordSocketConfig {
                 LogLevel = LogSeverity.Info,
-                MessageCacheSize = 250
+                MessageCacheSize = 250,
+                AlwaysDownloadUsers = true
             });
 
             _commands = new CommandService(new CommandServiceConfig {
                 LogLevel = LogSeverity.Info,
-                CaseSensitiveCommands = false,
+                CaseSensitiveCommands = false
             });
         }
 
