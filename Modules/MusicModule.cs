@@ -43,6 +43,7 @@ namespace Stringdicator.Modules {
             //If queue is empty, return
             var player = args.Player;
             if (!player.Queue.TryDequeue(out var queueable)) {
+                await _lavaNode.LeaveAsync(player.VoiceChannel);
                 return;
             }
 
