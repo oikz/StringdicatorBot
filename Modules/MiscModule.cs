@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
+using Discord;
 using Discord.Commands;
 
 namespace Stringdicator.Modules {
@@ -26,13 +27,20 @@ namespace Stringdicator.Modules {
             var thisChannel =
                 channels?.Nodes().FirstOrDefault(node => ((XElement) node).Value.Equals(Context.Channel.Id.ToString()));
             
+            var builder = new EmbedBuilder();
+            builder.WithDescription("");
+            builder.WithColor(3447003);
             //If this channel is already blacklisted, un-blacklist it
             if (thisChannel != null) {
+                builder.WithTitle("Channel Unblacklisted");
                 thisChannel.Remove();
             } else {
                 //Blacklist this channel
+                builder.WithTitle("Channel Blacklisted");
                 channels?.Add(new XElement("Channel", Context.Channel.Id));
             }
+
+            await ReplyAsync("", false, builder.Build());
 
             //Cleanup and save
             stream.Close();
