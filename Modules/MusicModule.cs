@@ -425,7 +425,7 @@ namespace Stringdicator.Modules {
             }
 
 
-            if (offset == 1) {
+            if (offset == 0) {
                 //Now playing
                 builder.AddField(new EmbedFieldBuilder {
                     Name = "Now Playing: ",
