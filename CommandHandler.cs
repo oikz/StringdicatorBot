@@ -1,7 +1,10 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
+using System.Xml;
+using System.Xml.Linq;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
@@ -67,6 +70,8 @@ namespace Stringdicator {
             // Create a WebSocket-based command context based on the message
             var context = new SocketCommandContext(_discordClient, message);
 
+            //Ignore all channels in the blacklist
+            if (await ChannelInBlacklist(message)) return;
 
             //Check each attachment posted by the user and if its an image (checked inside MakePrediction(), do a prediction
             var attachments = message.Attachments;
@@ -103,7 +108,7 @@ namespace Stringdicator {
                 _services);
         }
 
-        
+
         /// <summary>
         /// Handles reacting to messages being deleted by users
         /// </summary>
@@ -159,7 +164,7 @@ namespace Stringdicator {
             await _logFile.WriteLineAsync(
                 $"{DateTime.Now}: Message from {message.Author} in {channel.Name} was edited from {message} -> {newMessage}");
         }
-        
+
         /// <summary>
         /// Event called when the bot is ready to receive messages
         /// Completes final LavaLink setup
@@ -169,6 +174,36 @@ namespace Stringdicator {
             if (!_lavaNode.IsConnected) {
                 await _lavaNode.ConnectAsync();
             }
+        }
+
+        /// <summary>
+        /// Check if a channel is in the blacklist and ignore it if so
+        /// </summary>
+        private async Task<bool> ChannelInBlacklist(SocketMessage message) {
+            var commands = _commands.Commands.FirstOrDefault(command => command.Name.Equals("StringBlacklist"));
+            //Always allow blacklist commands to work to un-blacklist a channel
+            if (commands.Aliases.Any(a => a.Equals(message.Content.Replace("!", "")))) {
+                return false;
+            }
+
+
+            //Create new empty Blacklist file
+            if (!File.Exists("Blacklist.xml")) {
+                var settings = new XmlWriterSettings {Async = true};
+                var writer = XmlWriter.Create("Blacklist.xml", settings);
+                await writer.WriteElementStringAsync(null, "Channels", null, null);
+                writer.Close();
+                return false;
+            }
+            //Load the xml file containing all the channels
+            var root = XElement.Load("Blacklist.xml");
+            
+            //If the xml file contains this channel - is blacklisted, don't react to messages
+            var address =
+                from element in root.Elements("Channel")
+                where element.Value == message.Channel.Id.ToString()
+                select element;
+            return address.Any();
         }
     }
 }
