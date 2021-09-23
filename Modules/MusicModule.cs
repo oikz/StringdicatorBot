@@ -484,6 +484,7 @@ namespace Stringdicator.Modules {
 
             var player = _lavaNode.GetPlayer(Context.Guild);
             player.Queue.Shuffle();
+            await EmbedText("Queue Shuffled", false);
         }
 
         /// <summary>
