@@ -11,10 +11,6 @@ using Victoria.EventArgs;
 using Victoria.Responses.Search;
 
 namespace Stringdicator.Modules {
-    /**
-    * Base play module for playing/queueing up songs
-    * Joins the users channel and plays the specified url, then disconnects
-    */
     /// <summary>
     /// Module containing all Music related commands
     /// </summary>
@@ -198,6 +194,8 @@ namespace Stringdicator.Modules {
         /// </summary>
         /// <param name="searchResponse">The response received from the user's search</param>
         /// <param name="player">The LavaPlayer that should queue this track</param>
+        /// <param name="insertAtTop">True if the track is to be added at the top of the queue</param>
+        /// <param name="index">Used for adding tracks from a playlist from a given index of the playlist</param>
         private async Task QueueNow(SearchResponse searchResponse, LavaPlayer player, bool insertAtTop, int index) {
             var test = new List<LavaTrack>();
             if (insertAtTop) {
@@ -230,6 +228,7 @@ namespace Stringdicator.Modules {
         /// </summary>
         /// <param name="searchResponse">The response received from the user's search</param>
         /// <param name="player">The LavaPlayer that should play this track</param>
+        /// <param name="index"></param>
         private async Task PlayNow(SearchResponse searchResponse, LavaPlayer player, int index) {
             var track = searchResponse.Tracks.ElementAt(index);
 

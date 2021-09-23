@@ -63,7 +63,7 @@ namespace Stringdicator.Modules {
         [Command("Stringsearch")]
         [Summary("Finds a searched image")]
         [Alias("SSR")]
-        private async Task StringAsync([Remainder] string searchTerm) {
+        private async Task StringSearchAsync([Remainder] string searchTerm) {
             //Setup and send search request
             var request = new ImageSearchRequest {
                 Query = searchTerm,
