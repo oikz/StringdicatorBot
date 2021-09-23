@@ -469,6 +469,24 @@ namespace Stringdicator.Modules {
         }
 
         /// <summary>
+        /// Shuffle the current queue for the channel that the user is in
+        /// </summary>
+        [Command("StringShuffle")]
+        [Summary("Shuffle the current queue")]
+        [Alias("SSH")]
+        private async Task ShuffleQueue() {
+            if (!UserInVoice().Result) {
+                return;
+            }
+            
+
+            if (!_lavaNode.HasPlayer(Context.Guild)) return;
+
+            var player = _lavaNode.GetPlayer(Context.Guild);
+            player.Queue.Shuffle();
+        }
+
+        /// <summary>
         /// Embed and send a message with the provided parameters
         /// </summary>
         /// <param name="title">The title of the embed to send</param>
