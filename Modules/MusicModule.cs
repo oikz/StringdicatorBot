@@ -262,7 +262,7 @@ namespace Stringdicator.Modules {
         /// Skips the currently playing song
         /// </summary>
         [Command("StringSkip")]
-        [Summary("Skips the currently playing song")]
+        [Summary("Skips the currently playing Track")]
         [Alias("SS")]
         private async Task SkipAsync() {
             if (!UserInVoice().Result) {
@@ -271,7 +271,20 @@ namespace Stringdicator.Modules {
 
             if (!_lavaNode.HasPlayer(Context.Guild)) return;
             var player = _lavaNode.GetPlayer(Context.Guild);
-            await EmbedText("Song Skipped: ", true, player.Track.Title, await player.Track.FetchArtworkAsync());
+
+
+            var builder = new EmbedBuilder();
+            builder.WithTitle("Song Skipped: ");
+            builder.WithDescription(player.Track.Title);
+            builder.WithThumbnailUrl(await player.Queue.ElementAt(0).FetchArtworkAsync());
+            builder.AddField(new EmbedFieldBuilder {
+                Name = "Now Playing: ",
+                Value = player.Queue.ElementAt(0).Title
+            });
+            builder.WithColor(3447003);
+            await ReplyAsync("", false, builder.Build());
+
+
             if (!player.Queue.Any()) {
                 await player.StopAsync();
             } else {
