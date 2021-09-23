@@ -391,9 +391,9 @@ namespace Stringdicator.Modules {
         /// Display the current queue of tracks
         /// </summary>
         [Command("StringQueue")]
-        [Summary("Display the current track queue")]
+        [Summary("Display the current track queue with an optional page number")]
         [Alias("SQ")]
-        private async Task QueueAsync() {
+        private async Task QueueAsync(int offset = 1) {
             if (!UserInVoice().Result) {
                 return;
             }
@@ -405,6 +405,10 @@ namespace Stringdicator.Modules {
             if ((player.PlayerState == PlayerState.Stopped || player.PlayerState == PlayerState.None) &&
                 player.Queue.Count == 0) {
                 await EmbedText("Queue is empty", false);
+                return;
+            }
+            offset = (offset - 1) * 5;
+            if (offset > player.Queue.Count) {
                 return;
             }
 
@@ -420,32 +424,45 @@ namespace Stringdicator.Modules {
                 return;
             }
 
-            //Now playing
-            builder.AddField(new EmbedFieldBuilder {
-                Name = "Now Playing: ",
-                Value = $"[{player.Track.Title}]({player.Track.Url})" +
-                        $"\n {TrimTime(player.Track.Position.ToString(@"dd\:hh\:mm\:ss"))} " +
-                        $"/ {TrimTime(player.Track.Duration.ToString(@"dd\:hh\:mm\:ss"))}"
-            });
+
+            if (offset == 1) {
+                //Now playing
+                builder.AddField(new EmbedFieldBuilder {
+                    Name = "Now Playing: ",
+                    Value = $"[{player.Track.Title}]({player.Track.Url})" +
+                            $"\n {TrimTime(player.Track.Position.ToString(@"dd\:hh\:mm\:ss"))} " +
+                            $"/ {TrimTime(player.Track.Duration.ToString(@"dd\:hh\:mm\:ss"))}"
+                });
 
 
-            //Up next
-            builder.AddField(new EmbedFieldBuilder {
-                Name = "Next: ",
-                Value = $"[{player.Queue.ElementAt(0).Title}]({player.Queue.ElementAt(0).Url})" +
-                        $"\n {TrimTime(player.Queue.ElementAt(0).Duration.ToString(@"dd\:hh\:mm\:ss"))}"
-            });
+                //Up next
+                builder.AddField(new EmbedFieldBuilder {
+                    Name = "Next: ",
+                    Value = $"[{player.Queue.ElementAt(0).Title}]({player.Queue.ElementAt(0).Url})" +
+                            $"\n {TrimTime(player.Queue.ElementAt(0).Duration.ToString(@"dd\:hh\:mm\:ss"))}"
+                });
 
 
-            //Remaining Queue
-            for (var i = 1; i < 4 && i < player.Queue.Count; i++) {
-                var lavaTrack = player.Queue.ElementAt(i);
-                var fieldBuilder = new EmbedFieldBuilder {
-                    Name = $"Queue position {i + 1}",
-                    Value = $"[{lavaTrack.Title}]({lavaTrack.Url})" +
-                            $"\n {TrimTime(lavaTrack.Duration.ToString(@"dd\:hh\:mm\:ss"))}"
-                };
-                builder.AddField(fieldBuilder);
+                //Remaining Queue
+                for (var i = 1; i < 4 && i < player.Queue.Count; i++) {
+                    var lavaTrack = player.Queue.ElementAt(i);
+                    var fieldBuilder = new EmbedFieldBuilder {
+                        Name = $"Queue position {i + 1}",
+                        Value = $"[{lavaTrack.Title}]({lavaTrack.Url})" +
+                                $"\n {TrimTime(lavaTrack.Duration.ToString(@"dd\:hh\:mm\:ss"))}"
+                    };
+                    builder.AddField(fieldBuilder);
+                }
+            } else {
+                for (var i = offset; i < offset + 5 && i < player.Queue.Count; i++) {
+                    var lavaTrack = player.Queue.ElementAt(i);
+                    var fieldBuilder = new EmbedFieldBuilder {
+                        Name = $"Queue position {i + 1}",
+                        Value = $"[{lavaTrack.Title}]({lavaTrack.Url})" +
+                                $"\n {TrimTime(lavaTrack.Duration.ToString(@"dd\:hh\:mm\:ss"))}"
+                    };
+                    builder.AddField(fieldBuilder);
+                }
             }
 
             await ReplyAsync("", false, builder.Build());
