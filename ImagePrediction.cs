@@ -7,8 +7,11 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
+using System.Xml;
+using System.Xml.Linq;
 using Discord;
 using Discord.Commands;
+using Discord.WebSocket;
 
 namespace Stringdicator {
     public static class ImagePrediction {
@@ -18,7 +21,11 @@ namespace Stringdicator {
         /// </summary>
         /// <param name="attachmentUrl">The url of the attachment to be sent for prediction</param>
         /// <param name="context">The Context of the message, used for replying to the user</param>
-        public static void MakePrediction(string attachmentUrl, SocketCommandContext context) {
+        public static async void MakePrediction(string attachmentUrl, SocketCommandContext context) {
+            if (await ChannelInImageBlacklist(context.Message)) {
+                return;
+            }
+            
             //Trim the end of urls as some can contain extra characters after the filename
             attachmentUrl = attachmentUrl switch {
                 var a when a.Contains(".jpg") => attachmentUrl.Split(".jpg")[0] + ".jpg",
@@ -115,6 +122,33 @@ namespace Stringdicator {
             var fileStream = new FileStream(imageFilePath, FileMode.Open, FileAccess.Read);
             var binaryReader = new BinaryReader(fileStream);
             return binaryReader.ReadBytes((int) fileStream.Length);
+        }
+        
+        
+        /// <summary>
+        /// Checks whether the current channel is blacklisted from reacting to images with Image Classification
+        /// </summary>
+        /// <param name="message">The message sent</param>
+        /// <returns>True if in the blacklist, false otherwise</returns>
+        private static async Task<bool> ChannelInImageBlacklist(SocketMessage message) {
+            //Create new empty Blacklist file
+            if (!File.Exists("BlacklistImages.xml")) {
+                var settings = new XmlWriterSettings {Async = true};
+                var writer = XmlWriter.Create("BlacklistImages.xml", settings);
+                await writer.WriteElementStringAsync(null, "Channels", null, null);
+                writer.Close();
+                return false;
+            }
+
+            //Load the xml file containing all the channels
+            var root = XElement.Load("BlacklistImages.xml");
+
+            //If the xml file contains this channel - is blacklisted, don't react to messages
+            var address =
+                from element in root.Elements("Channel")
+                where element.Value == message.Channel.Id.ToString()
+                select element;
+            return address.Any();
         }
     }
 }
