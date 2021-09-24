@@ -14,6 +14,7 @@ namespace Stringdicator.Modules {
     /// <summary>
     /// Module containing all Music related commands
     /// </summary>
+    [Summary("Music Commands")]
     public class MusicModule : ModuleBase<SocketCommandContext> {
         private readonly LavaNode _lavaNode;
 

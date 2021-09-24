@@ -10,6 +10,7 @@ namespace Stringdicator.Modules {
     /// <summary>
     /// Module for miscellaneous commands that users can use
     /// </summary>
+    [Summary("Miscellaneous Commands")]
     public class MiscModule : ModuleBase<SocketCommandContext> {
         /// <summary>
         /// Blacklist a channel from being accessible to commands
