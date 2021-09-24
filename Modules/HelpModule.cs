@@ -56,7 +56,7 @@ namespace Stringdicator.Modules {
 
 
                 //Embed builder
-                builder.WithTitle($"All Stringdicator Commands. {module.Name.Replace("Module", " Commands")}");
+                builder.WithTitle($"{module.Name.Replace("Module", " Commands")}");
 
 
                 //Show each module's commands separately
