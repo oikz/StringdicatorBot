@@ -84,8 +84,11 @@ namespace Stringdicator {
 
             //Result
             var resultString = await response.Content.ReadAsStringAsync();
-
-
+            
+            if (resultString == null) {
+                return;
+            }
+            
             //Take the response from Custom Vision and get the probability of each tag for the provided image
             //Lots of string splits to get it :/
             resultString = resultString.Split('[')[1];
