@@ -13,7 +13,7 @@ namespace Stringdicator.Modules {
     /// Module containing the String Image modules
     /// </summary>
     [Summary("String Commands")]
-    public class StringModules : ModuleBase<SocketCommandContext> {
+    public class StringModule : ModuleBase<SocketCommandContext> {
         /// <summary>
         /// String! - Googles "ball of string" and returns one of the top 190 images
         /// </summary>
