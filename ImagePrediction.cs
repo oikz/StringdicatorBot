@@ -51,6 +51,7 @@ namespace Stringdicator {
 
                 } catch (WebException exception) {
                     Console.WriteLine("Error: " + exception.Message);
+                    return;
                 }
             }
 
