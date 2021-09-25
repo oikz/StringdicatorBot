@@ -46,7 +46,12 @@ namespace Stringdicator {
 
             //Download the image for easier stuff
             using (var client = new WebClient()) {
-                client.DownloadFile(new Uri(attachmentUrl), filename);
+                try {
+                    client.DownloadFile(new Uri(attachmentUrl), filename);
+
+                } catch (WebException exception) {
+                    Console.WriteLine("Error: " + exception.Message);
+                }
             }
 
             //Need to load first frame as a png if its a gif
