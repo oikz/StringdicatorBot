@@ -51,8 +51,14 @@ namespace Stringdicator.Modules {
                 await player.TextChannel.SendMessageAsync("Next item in queue is not a track.");
                 return;
             }
+            
+            //If there are no other users in the voice channel, leave
+            if (await player.VoiceChannel.GetUsersAsync().CountAsync() <= 1) {
+                await _lavaNode.LeaveAsync(player.VoiceChannel);
+                return;
+            }
 
-            //Play the song and output whats being played
+            //Play the track and output whats being played
             await args.Player.PlayAsync(queueable);
 
             var builder = new EmbedBuilder {
@@ -112,7 +118,7 @@ namespace Stringdicator.Modules {
         /// </summary>
         /// <param name="searchQuery">The user's track search query</param>
         [Command("StringPlay", RunMode = RunMode.Async)]
-        [Summary("Play a song or queue up a song")]
+        [Summary("Play a track or queue up a track")]
         [Alias("SP")]
         private async Task PlayAsync([Remainder] string searchQuery) {
             if (!UserInVoice().Result) {
@@ -141,12 +147,12 @@ namespace Stringdicator.Modules {
                 return;
             }
 
-            //Get the player and start playing/queueing a single song or playlist
+            //Get the player and start playing/queueing a single track or playlist
             var player = _lavaNode.GetPlayer(Context.Guild);
-            //Queue up next song
+            //Queue up next track
             if (player.PlayerState == PlayerState.Playing || player.PlayerState == PlayerState.Paused) {
                 await QueueNow(searchResponse, player, false, index);
-                //Play this song now
+                //Play this track now
             } else {
                 await PlayNow(searchResponse, player, index);
             }
@@ -191,7 +197,7 @@ namespace Stringdicator.Modules {
         }
 
         /// <summary>
-        /// Helper method for queuing one or more songs based on the search terms
+        /// Helper method for queuing one or more tracks based on the search terms
         /// </summary>
         /// <param name="searchResponse">The response received from the user's search</param>
         /// <param name="player">The LavaPlayer that should queue this track</param>
@@ -214,7 +220,7 @@ namespace Stringdicator.Modules {
                     searchResponse.Playlist.Name, await searchResponse.Tracks.ElementAt(index).FetchArtworkAsync(),
                     true);
             } else {
-                //Single song queueing
+                //Single track queueing
                 var track = searchResponse.Tracks.ElementAt(0);
                 player.Queue.Enqueue(track);
                 await EmbedText($"{track.Title}", true, TrimTime(track.Duration.ToString(@"dd\:hh\:mm\:ss")),
@@ -225,7 +231,7 @@ namespace Stringdicator.Modules {
         }
 
         /// <summary>
-        /// Helper method for playing one or more songs based on the search terms
+        /// Helper method for playing one or more tracks based on the search terms
         /// </summary>
         /// <param name="searchResponse">The response received from the user's search</param>
         /// <param name="player">The LavaPlayer that should play this track</param>
@@ -250,7 +256,7 @@ namespace Stringdicator.Modules {
                     searchResponse.Playlist.Name, await searchResponse.Tracks.ElementAt(index).FetchArtworkAsync(),
                     true);
             } else {
-                //Single Song queueing
+                //Single Track queueing
                 await player.PlayAsync(track);
                 await EmbedText($"Now Playing: {track.Title}", true,
                     "Duration: " + TrimTime(track.Duration.ToString(@"dd\:hh\:mm\:ss")),
@@ -260,7 +266,7 @@ namespace Stringdicator.Modules {
 
 
         /// <summary>
-        /// Skips the currently playing song
+        /// Skips the currently playing track
         /// </summary>
         [Command("StringSkip")]
         [Summary("Skips the currently playing Track")]
@@ -275,13 +281,15 @@ namespace Stringdicator.Modules {
 
 
             var builder = new EmbedBuilder();
-            builder.WithTitle("Song Skipped: ");
+            builder.WithTitle("Track Skipped: ");
             builder.WithDescription(player.Track.Title);
-            builder.WithThumbnailUrl(await player.Queue.ElementAt(0).FetchArtworkAsync());
-            builder.AddField(new EmbedFieldBuilder {
-                Name = "Now Playing: ",
-                Value = player.Queue.ElementAt(0).Title
-            });
+            if (player.Queue.Count > 0) {
+                builder.WithThumbnailUrl(await player.Queue.ElementAt(0).FetchArtworkAsync());
+                builder.AddField(new EmbedFieldBuilder {
+                    Name = "Now Playing: ",
+                    Value = player.Queue.ElementAt(0).Title
+                });
+            }
             builder.WithColor(3447003);
             await ReplyAsync("", false, builder.Build());
 
@@ -295,11 +303,11 @@ namespace Stringdicator.Modules {
 
 
         /// <summary>
-        /// Removes a specified song from the queue
+        /// Removes a specified track from the queue
         /// </summary>
         /// <param name="index">The index in the queue that the user wishes to skip</param>
         [Command("StringSkip")]
-        [Summary("Skips a specified song in the queue")]
+        [Summary("Skips a specified track in the queue")]
         [Alias("SS")]
         private async Task RemoveFromQueueAsync([Remainder] int index) {
             if (!UserInVoice().Result) {
@@ -313,7 +321,7 @@ namespace Stringdicator.Modules {
                 return;
             }
 
-            await EmbedText("Song Skipped: ", true, player.Queue.ElementAt(index - 1).Title,
+            await EmbedText("Track Skipped: ", true, player.Queue.ElementAt(index - 1).Title,
                 await player.Queue.ElementAt(index - 1).FetchArtworkAsync());
             player.Queue.RemoveAt(index - 1);
         }
@@ -381,7 +389,7 @@ namespace Stringdicator.Modules {
         [Command("StringNowPlaying")]
         [Summary("Show the currently playing track")]
         [Alias("SNP")]
-        private async Task CurrentSongAsync() {
+        private async Task CurrentTrackAsync() {
             if (!UserInVoice().Result) {
                 return;
             }
@@ -433,7 +441,7 @@ namespace Stringdicator.Modules {
             builder.WithDescription("");
 
             if (player.Queue.Count == 0) {
-                await CurrentSongAsync();
+                await CurrentTrackAsync();
                 return;
             }
 
