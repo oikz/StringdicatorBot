@@ -85,7 +85,7 @@ namespace Stringdicator {
             //Result
             var resultString = await response.Content.ReadAsStringAsync();
             
-            if (resultString == null || response.IsSuccessStatusCode) {
+            if (resultString == null || !response.IsSuccessStatusCode) {
                 return;
             }
             
