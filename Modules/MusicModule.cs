@@ -289,6 +289,8 @@ namespace Stringdicator.Modules {
                     Name = "Now Playing: ",
                     Value = player.Queue.ElementAt(0).Title
                 });
+            } else {
+                await _lavaNode.LeaveAsync(player.VoiceChannel);
             }
             builder.WithColor(3447003);
             await ReplyAsync("", false, builder.Build());
