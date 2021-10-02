@@ -5,6 +5,7 @@ using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
+using Stringdicator.Modules;
 using Victoria;
 
 namespace Stringdicator {
@@ -51,6 +52,7 @@ namespace Stringdicator {
                 .AddSingleton(_discordClient)
                 .AddSingleton(_commands)
                 .AddSingleton<CommandHandler>()
+                .AddSingleton<MusicService>()
                 .AddLavaNode(x => { x.SelfDeaf = false; })
                 .BuildServiceProvider();
 

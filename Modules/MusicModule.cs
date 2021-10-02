@@ -7,7 +7,6 @@ using Discord;
 using Discord.Commands;
 using Victoria;
 using Victoria.Enums;
-using Victoria.EventArgs;
 using Victoria.Responses.Search;
 
 namespace Stringdicator.Modules {
@@ -17,62 +16,17 @@ namespace Stringdicator.Modules {
     [Summary("Music Commands")]
     public class MusicModule : ModuleBase<SocketCommandContext> {
         private readonly LavaNode _lavaNode;
+        private readonly MusicService _musicService;
 
         /// <summary>
         /// Constructor for music module to retrieve the lavaNode in use
         /// Uses the lavaNode for retrieving/managing/playing audio to voice channels
         /// </summary>
         /// <param name="lavaNode">The lavaNode to be used for audio playback</param>
-        public MusicModule(LavaNode lavaNode) {
+        /// <param name="musicService">The musicService responsible for handling music events</param>
+        public MusicModule(LavaNode lavaNode, MusicService musicService) {
             _lavaNode = lavaNode;
-            _lavaNode.OnTrackEnded += OnTrackEnded;
         }
-
-        /// <summary>
-        /// The method called when a track ends
-        /// Obtained mostly from the Victoria Tutorial pages
-        /// </summary>
-        /// <param name="args">The information about the track that has ended</param>
-        private async Task OnTrackEnded(TrackEndedEventArgs args) {
-            if (args.Reason != TrackEndReason.Finished || args.Player.PlayerState != PlayerState.Stopped ||
-                args.Track == null) {
-                return;
-            }
-
-            //If queue is empty, return
-            var player = args.Player;
-            if (!player.Queue.TryDequeue(out var queueable)) {
-                await _lavaNode.LeaveAsync(player.VoiceChannel);
-                return;
-            }
-
-            //General Error case for queue
-            if (queueable == null) {
-                await player.TextChannel.SendMessageAsync("Next item in queue is not a track.");
-                return;
-            }
-            
-            //If there are no other users in the voice channel, leave
-            if (await player.VoiceChannel.GetUsersAsync().CountAsync() <= 1) {
-                await _lavaNode.LeaveAsync(player.VoiceChannel);
-                return;
-            }
-
-            //Play the track and output whats being played
-            await args.Player.PlayAsync(queueable);
-
-            var builder = new EmbedBuilder {
-                Title = "Now Playing: ",
-                Description = $"[{player.Track.Title}]({player.Track.Url})" +
-                              $"\n {TrimTime(queueable.Position.ToString(@"dd\:hh\:mm\:ss"))} / " +
-                              $"{TrimTime(queueable.Duration.ToString(@"dd\:hh\:mm\:ss"))}",
-                ThumbnailUrl = await queueable.FetchArtworkAsync(),
-                Color = new Color(3447003)
-            };
-            //Output now playing message
-            await player.TextChannel.SendMessageAsync("", false, builder.Build());
-        }
-
 
         /// <summary>
         /// Command for joining the voice channel that a user is currently in
@@ -90,7 +44,7 @@ namespace Stringdicator.Modules {
             //Get the users voiceState
             var voiceState = Context.User as IVoiceState;
             //Try to join the channel
-            await _lavaNode.JoinAsync(voiceState.VoiceChannel, Context.Channel as ITextChannel);
+            await _lavaNode.JoinAsync(voiceState?.VoiceChannel, Context.Channel as ITextChannel);
         }
 
         /// <summary>
@@ -174,7 +128,7 @@ namespace Stringdicator.Modules {
             if (!_lavaNode.HasPlayer(Context.Guild)) {
                 await JoinAsync();
             }
-            
+
             var index = 0;
             if (searchQuery.Contains("youtube.com/watch?v=") && searchQuery.Contains("&list=")) {
                 //If the video is within a playlist, change the search to be the playlist and just remove the first tracks
@@ -215,7 +169,7 @@ namespace Stringdicator.Modules {
                 for (var i = index; i < searchResponse.Tracks.Count; i++) {
                     player.Queue.Enqueue(searchResponse.Tracks.ElementAt(i));
                 }
-                
+
                 await EmbedText($"{searchResponse.Tracks.Count - index} tracks added to queue", true,
                     searchResponse.Playlist.Name, await searchResponse.Tracks.ElementAt(index).FetchArtworkAsync(),
                     true);
@@ -292,15 +246,11 @@ namespace Stringdicator.Modules {
             } else {
                 await _lavaNode.LeaveAsync(player.VoiceChannel);
             }
+
             builder.WithColor(3447003);
             await ReplyAsync("", false, builder.Build());
 
-
-            if (!player.Queue.Any()) {
-                await player.StopAsync();
-            } else {
-                await player.SkipAsync();
-            }
+            await player.SkipAsync();
         }
 
 
@@ -430,6 +380,7 @@ namespace Stringdicator.Modules {
                 await EmbedText("Queue is empty", false);
                 return;
             }
+
             offset = (offset - 1) * 5;
             if (offset > player.Queue.Count) {
                 return;
@@ -501,7 +452,7 @@ namespace Stringdicator.Modules {
             if (!UserInVoice().Result) {
                 return;
             }
-            
+
 
             if (!_lavaNode.HasPlayer(Context.Guild)) return;
 
@@ -549,7 +500,7 @@ namespace Stringdicator.Modules {
         /// </summary>
         /// <param name="time">The string time to be trimmed</param>
         /// <returns>A trimmed string containing nice formatting</returns>
-        private static string TrimTime(string time) {
+        public static string TrimTime(string time) {
             if (time.StartsWith("00:")) {
                 time = time.TrimStart('0', ':');
             }
