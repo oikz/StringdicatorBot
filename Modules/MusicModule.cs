@@ -64,7 +64,6 @@ namespace Stringdicator.Modules {
             if (_lavaNode.HasPlayer(Context.Guild)) {
                 var player = _lavaNode.GetPlayer(Context.Guild);
                 await _lavaNode.LeaveAsync(player.VoiceChannel);
-                await EmbedText("Disconnected", false);
             }
         }
 
@@ -491,7 +490,7 @@ namespace Stringdicator.Modules {
         private async Task<bool> UserInVoice() {
             var voiceState = Context.User as IVoiceState;
             if (voiceState?.VoiceChannel != null) return true;
-            await EmbedText("You must be connected to a voice channel!", false);
+            await ReplyAsync("You are not in a voice channel");
             return false;
         }
 

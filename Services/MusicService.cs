@@ -1,5 +1,8 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Linq;
+using System.Threading.Tasks;
 using Discord;
+using Discord.WebSocket;
 using Stringdicator.Modules;
 using Victoria;
 using Victoria.Enums;
@@ -48,10 +51,13 @@ namespace Stringdicator.Services {
             }
 
             //If there are no other users in the voice channel, leave
-            //if (await player.VoiceChannel.GetUsersAsync().CountAsync() <= 1) {
-            //    await _lavaNode.LeaveAsync(player.VoiceChannel);
-            //    return;
-            //}
+            var voiceChannelUsers = (player.VoiceChannel as SocketVoiceChannel)?.Users
+                .Where(x => !x.IsBot)
+                .ToArray();
+            if (!(voiceChannelUsers ?? Array.Empty<SocketGuildUser>()).Any()) {
+                await _lavaNode.LeaveAsync(player.VoiceChannel);
+                return;
+            }
 
             //Play the track and output whats being played
             await args.Player.PlayAsync(queueable);
