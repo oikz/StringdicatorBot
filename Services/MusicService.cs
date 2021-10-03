@@ -1,10 +1,11 @@
 ﻿using System.Threading.Tasks;
 using Discord;
+using Stringdicator.Modules;
 using Victoria;
 using Victoria.Enums;
 using Victoria.EventArgs;
 
-namespace Stringdicator.Modules {
+namespace Stringdicator.Services {
     /// <summary>
     /// Music service for handling all of the events coming from audio playback in one place
     /// </summary>

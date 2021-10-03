@@ -5,7 +5,7 @@ using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
-using Stringdicator.Modules;
+using Stringdicator.Services;
 using Victoria;
 
 namespace Stringdicator {

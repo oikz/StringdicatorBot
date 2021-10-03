@@ -5,6 +5,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Discord;
 using Discord.Commands;
+using Stringdicator.Services;
 using Victoria;
 using Victoria.Enums;
 using Victoria.Responses.Search;
