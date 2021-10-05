@@ -193,6 +193,12 @@ namespace Stringdicator {
                 var writer = XmlWriter.Create("Blacklist.xml", settings);
                 await writer.WriteElementStringAsync(null, "Channels", null, null);
                 writer.Close();
+                
+                //Create new empty BlacklistImages file
+                if (File.Exists("BlacklistImages.xml")) return false;
+                writer = XmlWriter.Create("BlacklistImages.xml", settings);
+                await writer.WriteElementStringAsync(null, "Channels", null, null);
+                writer.Close();
                 return false;
             }
             //Load the xml file containing all the channels
