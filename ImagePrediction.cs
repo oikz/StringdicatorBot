@@ -41,8 +41,7 @@ namespace Stringdicator {
                 return;
             }
 
-            var current = Directory.GetCurrentDirectory();
-            var filename = current + "\\image" + extension;
+            var filename = "image" + extension;
 
             //Download the image for easier stuff
             using (var client = new WebClient()) {
@@ -58,10 +57,14 @@ namespace Stringdicator {
             //Need to load first frame as a png if its a gif
             //Get the first frame and save it as a png in the same format
             if (extension.Equals(".gif")) {
-                var gifImg = System.Drawing.Image.FromFile(filename);
-                var bmp = new Bitmap(gifImg);
-                filename = filename.Replace(".gif", ".png");
-                bmp.Save(filename);
+                try {
+                    var gifImg = System.Drawing.Image.FromFile(filename);
+                    var bmp = new Bitmap(gifImg);
+                    filename = filename.Replace(".gif", ".png");
+                    bmp.Save(filename);
+                } catch (OutOfMemoryException) {
+                    return;
+                }
             }
 
             MakePredictionRequest(filename, context).Wait();
