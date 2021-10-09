@@ -88,7 +88,11 @@ namespace Stringdicator.Modules {
             if (searchQuery.Contains("youtube.com/watch?v=") && searchQuery.Contains("&list=")) {
                 //If the video is within a playlist, change the search to be the playlist and just remove the first tracks
                 searchQuery = Regex.Replace(searchQuery, @"watch\?v=.*&list=", "playlist?list=");
-                index = Convert.ToInt32(searchQuery.Split("&index=")[1]) - 1;
+                if (searchQuery.Contains("&index=")) {
+                    index = Convert.ToInt32(searchQuery.Split("&index=")[1]) - 1;
+                } else {
+                    index = 0;
+                }
             }
 
             var searchType = searchQuery.Contains("youtube.com/") ? SearchType.Direct : SearchType.YouTube;
