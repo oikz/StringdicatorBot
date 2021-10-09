@@ -249,12 +249,17 @@ namespace Stringdicator.Modules {
                 });
             } else {
                 await _lavaNode.LeaveAsync(player.VoiceChannel);
+                return;
             }
 
             builder.WithColor(3447003);
             await ReplyAsync("", false, builder.Build());
 
-            await player.SkipAsync();
+            try {
+                await player.SkipAsync();
+            } catch (InvalidOperationException) {
+                //websocket not in open state
+            }
         }
 
 
