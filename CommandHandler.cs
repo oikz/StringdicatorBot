@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Reflection;
 using System.Threading.Tasks;
 using System.Xml;
@@ -65,7 +66,7 @@ namespace Stringdicator {
             // Don't process the command if it was a system message
             if (!(messageParam is SocketUserMessage message)) return;
             // Ignore messages from other bots
-            if (message.Author.IsBot && message.Author.Id.Equals(_discordClient.CurrentUser.Id)) return;
+            if (message.Author.IsBot || message.Author.Id.Equals(_discordClient.CurrentUser.Id)) return;
 
             // Create a WebSocket-based command context based on the message
             var context = new SocketCommandContext(_discordClient, message);
@@ -86,6 +87,13 @@ namespace Stringdicator {
             }
 
             if (message.Content.StartsWith("https://tenor.com")) {
+                if (!message.Content.StartsWith("https://tenor.com/view")) {
+                    var check = await new HttpClient().GetAsync(new Uri(message.Content));
+                    ImagePrediction.MakePrediction(check.RequestMessage.RequestUri + ".gif", context);
+                    GC.Collect();
+                    return;
+                }
+
                 ImagePrediction.MakePrediction(message.Content + ".gif", context);
                 GC.Collect();
                 return;
