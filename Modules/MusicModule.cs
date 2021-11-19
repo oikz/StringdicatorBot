@@ -257,7 +257,8 @@ namespace Stringdicator.Modules {
 
             try {
                 await player.SkipAsync();
-            } catch (InvalidOperationException) {
+            } catch (Exception e) {
+                Console.WriteLine(e);
                 //websocket not in open state
             }
         }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Discord;
@@ -60,7 +61,11 @@ namespace Stringdicator.Services {
             }
 
             //Play the track and output whats being played
-            await args.Player.PlayAsync(queueable);
+            try {
+                await args.Player.PlayAsync(queueable);
+            } catch (Exception e) {
+                Console.WriteLine(e);
+            }
 
             var builder = new EmbedBuilder {
                 Title = "Now Playing: ",
@@ -79,7 +84,16 @@ namespace Stringdicator.Services {
         /// </summary>
         /// <param name="args">The information about the track that has ended</param>
         private static async Task OnTrackException(TrackExceptionEventArgs args) {
-            await args.Player.SkipAsync();
+            var test = new List<LavaTrack>();
+            test.AddRange(args.Player.Queue.RemoveRange(0, args.Player.Queue.Count));
+            args.Player.Queue.Clear();
+            try {
+                await args.Player.PlayAsync(args.Track);
+            } catch (Exception e) {
+                Console.WriteLine(e);
+            }
+
+            args.Player.Queue.Enqueue(test);
         }
 
         /// <summary>
@@ -87,7 +101,16 @@ namespace Stringdicator.Services {
         /// </summary>
         /// <param name="args">The information about the track that has ended</param>
         private static async Task OnTrackStuck(TrackStuckEventArgs args) {
-            await args.Player.SkipAsync();
+            var test = new List<LavaTrack>();
+            test.AddRange(args.Player.Queue.RemoveRange(0, args.Player.Queue.Count));
+            args.Player.Queue.Clear();
+            try {
+                await args.Player.PlayAsync(args.Track);
+            } catch (Exception e) {
+                Console.WriteLine(e);
+            }
+
+            args.Player.Queue.Enqueue(test);
         }
     }
 }
