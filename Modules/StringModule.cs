@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 using Discord;
 using Discord.Commands;
@@ -63,6 +64,37 @@ namespace Stringdicator.Modules {
             //Send message
             await Context.Channel.SendMessageAsync("", false, builder.Build());
             Console.WriteLine("Stringsearch! - " + searchTerm + " " + item.Link);
+
+            //Do an image classification prediction for stringsearch images as well
+            ImagePrediction.MakePrediction(item.Link, Context);
+            GC.Collect();
+            //Call the prediction method
+        }
+
+        /// <summary>
+        /// Google Image Searches for a given search term and sends an spoilered message containing a random search result
+        /// </summary>
+        /// <param name="searchTerm">The string term to be searched</param>
+        [Command("StringsearchSpoiler")]
+        [Summary("Finds a searched image")]
+        [Alias("SSRS")]
+        private async Task StringSearchSpoilerAsync([Remainder] string searchTerm) {
+            var items = await ImageSearch(searchTerm);
+            var random = new Random();
+            var item = items[random.Next(0, items.Length)];
+
+            //Best solution to sending a spoilered image seems to just be to download it and send it
+            const string fileName = "image.png";
+            using (var client = new WebClient()) {
+                try {
+                    await client.DownloadFileTaskAsync(new Uri(item.Link), fileName);
+                } catch (WebException exception) {
+                    Console.WriteLine("Error: " + exception.Message);
+                    return;
+                }
+            }
+
+            await Context.Channel.SendFileAsync(fileName, isSpoiler: true);
 
             //Do an image classification prediction for stringsearch images as well
             ImagePrediction.MakePrediction(item.Link, Context);
