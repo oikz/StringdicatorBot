@@ -44,10 +44,10 @@ namespace Stringdicator {
             var filename = "image" + extension;
 
             //Download the image for easier stuff
-            using (var client = new WebClient()) {
+            using (var client = new HttpClient()) {
                 try {
-                    client.DownloadFile(new Uri(attachmentUrl), filename);
-
+                    var bytes = await client.GetByteArrayAsync(new Uri(attachmentUrl));
+                    await File.WriteAllBytesAsync(filename, bytes);
                 } catch (WebException exception) {
                     Console.WriteLine("Error: " + exception.Message);
                     return;

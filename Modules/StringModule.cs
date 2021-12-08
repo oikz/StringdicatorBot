@@ -1,6 +1,8 @@
 ﻿using System;
+using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Threading.Tasks;
 using Discord;
 using Discord.Commands;
@@ -85,9 +87,10 @@ namespace Stringdicator.Modules {
 
             //Best solution to sending a spoilered image seems to just be to download it and send it
             const string fileName = "image.png";
-            using (var client = new WebClient()) {
+            using (var client = new HttpClient()) {
                 try {
-                    await client.DownloadFileTaskAsync(new Uri(item.Link), fileName);
+                    var bytes = await client.GetByteArrayAsync(new Uri(item.Link));
+                    await File.WriteAllBytesAsync(fileName, bytes);
                 } catch (WebException exception) {
                     Console.WriteLine("Error: " + exception.Message);
                     return;
