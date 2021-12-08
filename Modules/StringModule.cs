@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using Discord;
 using Discord.Commands;
 using GoogleApi;
-using GoogleApi.Entities.Search;
+using GoogleApi.Entities.Search.Common;
 using GoogleApi.Entities.Search.Image.Request;
 
 namespace Stringdicator.Modules {
@@ -22,26 +22,11 @@ namespace Stringdicator.Modules {
         [Alias("S")]
         private async Task StringAsync() {
             //Setup and send search request
-            var request = new ImageSearchRequest();
             var random = new Random(); //Nice
-            request.Options.StartIndex =
-                random.Next(0, 190); //Max limit may change and result in 400 Bad Request responses
-            request.Query = "Ball of String";
-            request.Key = Environment.GetEnvironmentVariable("API_KEY");
-            request.SearchEngineId = Environment.GetEnvironmentVariable("SEARCH_ENGINE_ID");
-
-            //Gets the search response - contains info about search
-            BaseSearchResponse response;
-            try {
-                response =
-                    await GoogleSearch.ImageSearch.QueryAsync(request);
-            } catch (Exception e) {
-                Console.WriteLine("Error: " + e.Message);
-                return;
-            }
+            var startIndex = random.Next(0, 190);
 
             //Pick a random search result
-            var items = response.Items.ToArray();
+            var items = await ImageSearch("Ball of String", startIndex);
             var index = random.Next(0, items.Length);
             var item = items[index];
 
@@ -53,7 +38,7 @@ namespace Stringdicator.Modules {
 
             //Send message
             await Context.Channel.SendMessageAsync("", false, builder.Build());
-            Console.WriteLine("String! - " + item.Link + " " + (response.Query.StartIndex + index));
+            Console.WriteLine("String! - " + item.Link + " " + (startIndex + index));
         }
 
 
@@ -65,19 +50,7 @@ namespace Stringdicator.Modules {
         [Summary("Finds a searched image")]
         [Alias("SSR")]
         private async Task StringSearchAsync([Remainder] string searchTerm) {
-            //Setup and send search request
-            var request = new ImageSearchRequest {
-                Query = searchTerm,
-                Key = Environment.GetEnvironmentVariable("API_KEY"),
-                SearchEngineId = Environment.GetEnvironmentVariable("SEARCH_ENGINE_ID")
-            };
-
-            //Gets the search response - contains info about search
-            var response =
-                await GoogleSearch.ImageSearch.QueryAsync(request);
-
-            //Pick a random search result
-            var items = response.Items.ToArray();
+            var items = await ImageSearch(searchTerm);
             var random = new Random();
             var item = items[random.Next(0, items.Length)];
 
@@ -95,6 +68,25 @@ namespace Stringdicator.Modules {
             ImagePrediction.MakePrediction(item.Link, Context);
             GC.Collect();
             //Call the prediction method
+        }
+
+        private static async Task<Item[]> ImageSearch(string searchTerm, int startIndex = 0) {
+            //Setup and send search request
+            var request = new ImageSearchRequest {
+                Query = searchTerm,
+                Key = Environment.GetEnvironmentVariable("API_KEY"),
+                SearchEngineId = Environment.GetEnvironmentVariable("SEARCH_ENGINE_ID"),
+                Options = new SearchOptions {
+                    StartIndex = startIndex
+                }
+            };
+
+            //Gets the search response - contains info about search
+            var response =
+                await GoogleSearch.ImageSearch.QueryAsync(request);
+
+            //Pick a random search result
+            return response.Items.ToArray();
         }
     }
 }
