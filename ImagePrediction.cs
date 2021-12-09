@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
@@ -48,7 +47,7 @@ namespace Stringdicator {
                 try {
                     var bytes = await client.GetByteArrayAsync(new Uri(attachmentUrl));
                     await File.WriteAllBytesAsync(filename, bytes);
-                } catch (WebException exception) {
+                } catch (HttpRequestException exception) {
                     Console.WriteLine("Error: " + exception.Message);
                     return;
                 }

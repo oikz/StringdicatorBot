@@ -1,7 +1,6 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Discord;
@@ -91,7 +90,7 @@ namespace Stringdicator.Modules {
                 try {
                     var bytes = await client.GetByteArrayAsync(new Uri(item.Link));
                     await File.WriteAllBytesAsync(fileName, bytes);
-                } catch (WebException exception) {
+                } catch (HttpRequestException exception) {
                     Console.WriteLine("Error: " + exception.Message);
                     return;
                 }
