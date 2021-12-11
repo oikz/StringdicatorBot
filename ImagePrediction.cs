@@ -102,7 +102,7 @@ namespace Stringdicator {
 
             Console.WriteLine($"{predictionName} {predictionProbability}");
 
-            if (predictionName.Equals("String") && Convert.ToInt32(predictionProbability) > 0.8) {
+            if (predictionName.Equals("String") && Convert.ToDouble(predictionProbability) > 0.8) {
                 await context.Message.ReplyAsync("This looks like String!");
             }
         }
