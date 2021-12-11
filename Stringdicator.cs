@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Net.Http;
 using System.Threading.Tasks;
 using Discord;
 using Discord.Commands;
@@ -16,6 +17,7 @@ namespace Stringdicator {
     class Stringdicator {
         private readonly DiscordSocketClient _discordClient;
         private readonly CommandService _commands;
+        private readonly HttpClient _httpClient;
 
         private Stringdicator() {
             _discordClient = new DiscordSocketClient(new DiscordSocketConfig {
@@ -28,6 +30,9 @@ namespace Stringdicator {
                 LogLevel = LogSeverity.Info,
                 CaseSensitiveCommands = false
             });
+
+            _httpClient = new HttpClient();
+            _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (compatible; AcmeInc/1.0)");
         }
 
         /// <summary>
@@ -51,6 +56,7 @@ namespace Stringdicator {
             var services = new ServiceCollection()
                 .AddSingleton(_discordClient)
                 .AddSingleton(_commands)
+                .AddSingleton(_httpClient)
                 .AddSingleton<CommandHandler>()
                 .AddSingleton<MusicService>()
                 .AddLavaNode(x => { x.SelfDeaf = false; })
@@ -60,8 +66,9 @@ namespace Stringdicator {
             await _discordClient.LoginAsync(TokenType.Bot, Environment.GetEnvironmentVariable("TOKEN"));
             await _discordClient.StartAsync();
 
+            ImagePrediction.HttpClient = services.GetRequiredService<HttpClient>();
 
-            var handler = new CommandHandler(_discordClient, _commands, services);
+            var handler = new CommandHandler(_discordClient, _commands, services, _httpClient);
             await handler.InstallCommandsAsync();
 
             // Block this task until the program is closed.

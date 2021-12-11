@@ -23,6 +23,7 @@ namespace Stringdicator {
         private StreamWriter _logFile;
         private readonly ServiceProvider _services;
         private readonly LavaNode _lavaNode;
+        private readonly HttpClient _httpClient;
 
 
         /// <summary>
@@ -31,11 +32,13 @@ namespace Stringdicator {
         /// <param name="client">This discord client object</param>
         /// <param name="commands">The CommandService to be used</param>
         /// <param name="services">The ServiceProvider to be used</param>
-        public CommandHandler(DiscordSocketClient client, CommandService commands, ServiceProvider services) {
+        public CommandHandler(DiscordSocketClient client, CommandService commands, ServiceProvider services,
+            HttpClient httpClient) {
             _commands = commands;
             _discordClient = client;
             _services = services;
-            _lavaNode = (LavaNode) _services.GetService(typeof(LavaNode));
+            _lavaNode = _services.GetRequiredService<LavaNode>();
+            _httpClient = httpClient;
         }
 
         /// <summary>
@@ -88,8 +91,8 @@ namespace Stringdicator {
 
             if (message.Content.StartsWith("https://tenor.com")) {
                 if (!message.Content.StartsWith("https://tenor.com/view")) {
-                    var check = await new HttpClient().GetAsync(new Uri(message.Content));
-                    ImagePrediction.MakePrediction(check.RequestMessage.RequestUri + ".gif", context);
+                    var check = await _httpClient.GetAsync(new Uri(message.Content));
+                    ImagePrediction.MakePrediction(check.RequestMessage?.RequestUri + ".gif", context);
                     GC.Collect();
                     return;
                 }
@@ -197,11 +200,11 @@ namespace Stringdicator {
 
             //Create new empty Blacklist file
             if (!File.Exists("Blacklist.xml")) {
-                var settings = new XmlWriterSettings {Async = true};
+                var settings = new XmlWriterSettings { Async = true };
                 var writer = XmlWriter.Create("Blacklist.xml", settings);
                 await writer.WriteElementStringAsync(null, "Channels", null, null);
                 writer.Close();
-                
+
                 //Create new empty BlacklistImages file
                 if (File.Exists("BlacklistImages.xml")) return false;
                 writer = XmlWriter.Create("BlacklistImages.xml", settings);
@@ -209,9 +212,10 @@ namespace Stringdicator {
                 writer.Close();
                 return false;
             }
+
             //Load the xml file containing all the channels
             var root = XElement.Load("Blacklist.xml");
-            
+
             //If the xml file contains this channel - is blacklisted, don't react to messages
             var address =
                 from element in root.Elements("Channel")

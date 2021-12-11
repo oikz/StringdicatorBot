@@ -10,12 +10,13 @@ using GoogleApi.Entities.Search.Common;
 using GoogleApi.Entities.Search.Image.Request;
 
 namespace Stringdicator.Modules {
-
     /// <summary>
     /// Module containing the String Image modules
     /// </summary>
     [Summary("String Commands")]
     public class StringModule : ModuleBase<SocketCommandContext> {
+        public HttpClient HttpClient { get; set; }
+
         /// <summary>
         /// String! - Googles "ball of string" and returns one of the top 190 images
         /// </summary>
@@ -84,19 +85,15 @@ namespace Stringdicator.Modules {
             var random = new Random();
             var item = items[random.Next(0, items.Length)];
 
-            //Best solution to sending a spoilered image seems to just be to download it and send it
-            const string fileName = "image.png";
-            using (var client = new HttpClient()) {
-                try {
-                    var bytes = await client.GetByteArrayAsync(new Uri(item.Link));
-                    await File.WriteAllBytesAsync(fileName, bytes);
-                } catch (HttpRequestException exception) {
-                    Console.WriteLine("Error: " + exception.Message);
-                    return;
-                }
+            byte[] image;
+            try {
+                image = await HttpClient.GetByteArrayAsync(new Uri(item.Link));
+            } catch (HttpRequestException exception) {
+                Console.WriteLine("Error: " + exception.Message);
+                return;
             }
-
-            await Context.Channel.SendFileAsync(fileName, isSpoiler: true);
+            
+            await Context.Channel.SendFileAsync(new MemoryStream(image), "SPOILER_image.png");
 
             //Do an image classification prediction for stringsearch images as well
             ImagePrediction.MakePrediction(item.Link, Context);

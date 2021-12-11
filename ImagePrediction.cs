@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Linq;
@@ -11,9 +10,12 @@ using System.Xml.Linq;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
+using Newtonsoft.Json.Linq;
 
 namespace Stringdicator {
     public static class ImagePrediction {
+        public static HttpClient HttpClient { get; set; }
+
         /// <summary>
         /// Handles setup for the image classification prediction
         /// Take a given file url/attachment and set it up for Custom Vision prediction
@@ -24,7 +26,7 @@ namespace Stringdicator {
             if (await ChannelInImageBlacklist(context.Message)) {
                 return;
             }
-            
+
             //Trim the end of urls as some can contain extra characters after the filename
             attachmentUrl = attachmentUrl switch {
                 var a when a.Contains(".jpg") => attachmentUrl.Split(".jpg")[0] + ".jpg",
@@ -40,102 +42,71 @@ namespace Stringdicator {
                 return;
             }
 
-            var filename = "image" + extension;
-
-            //Download the image for easier stuff
-            using (var client = new HttpClient()) {
-                try {
-                    var bytes = await client.GetByteArrayAsync(new Uri(attachmentUrl));
-                    await File.WriteAllBytesAsync(filename, bytes);
-                } catch (HttpRequestException exception) {
-                    Console.WriteLine("Error: " + exception.Message);
-                    return;
-                }
+            byte[] image;
+            try {
+                image = await HttpClient.GetByteArrayAsync(new Uri(attachmentUrl));
+            } catch (HttpRequestException exception) {
+                Console.WriteLine("Error: " + exception.Message);
+                return;
             }
 
             //Need to load first frame as a png if its a gif
             //Get the first frame and save it as a png in the same format
             if (extension.Equals(".gif")) {
                 try {
-                    var gifImg = System.Drawing.Image.FromFile(filename);
-                    var bmp = new Bitmap(gifImg);
-                    filename = filename.Replace(".gif", ".png");
-                    bmp.Save(filename);
+                    var gifImg = System.Drawing.Image.FromStream(new MemoryStream(image));
+                    var bitmap = new Bitmap(gifImg);
+                    await using var stream = new MemoryStream();
+                    bitmap.Save(stream, System.Drawing.Imaging.ImageFormat.Png);
+                    image = stream.ToArray();
                 } catch (OutOfMemoryException) {
                     return;
                 }
             }
 
-            MakePredictionRequest(filename, context).Wait();
+            await MakePredictionRequest(image, context);
         }
 
         /// <summary>
         /// Handles the prediction of image classification when a user uploads an image
         /// Mostly taken from the Microsoft Docs for Custom Vision
         /// </summary>
-        /// <param name="imageFilePath">The filepath of the image to be sent</param>
+        /// <param name="image">The image to be sent in bytes</param>
         /// <param name="context">The Context of the message, used for replying to the user</param>
-        private static async Task MakePredictionRequest(string imageFilePath, SocketCommandContext context) {
-            var client = new HttpClient();
-
-            client.DefaultRequestHeaders.Add("Prediction-Key", "1414d8884b384beba783ebba4a225082");
-
+        private static async Task MakePredictionRequest(byte[] image, SocketCommandContext context) {
             //Prediction endpoint
             const string url =
                 "https://string3-prediction.cognitiveservices.azure.com/customvision/v3.0/Prediction/b0ad2694-b2da-4342-835e-26d7bf6018fc/classify/iterations/String/image";
 
             // Sends the image as a byte array to the endpoint to run a prediction on it
-            var byteData = GetImageAsByteArray(imageFilePath);
-            using var content = new ByteArrayContent(byteData);
+            using var content = new ByteArrayContent(image);
             content.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
-            var response = await client.PostAsync(url, content);
+            content.Headers.Add("Prediction-Key", "1414d8884b384beba783ebba4a225082");
+            var response = await HttpClient.PostAsync(url, content);
 
-            //Result
-            var resultString = await response.Content.ReadAsStringAsync();
-            
-            if (resultString == null || !response.IsSuccessStatusCode) {
+            if (!response.IsSuccessStatusCode) {
                 return;
             }
-            
-            //Take the response from Custom Vision and get the probability of each tag for the provided image
-            //Lots of string splits to get it :/
-            resultString = resultString.Split('[')[1];
-            var tags = resultString.Split("},{");
 
-            //Sort tag prediction probabilities into a dictionary
-            var probabilities = new Dictionary<double, string>();
-            foreach (var tag in tags) {
-                var probability = tag.Split(":")[1].Split(",")[0]; //Extract the probability via regex
-                probabilities.Add(double.Parse(probability), tag.Split("\"")[9]);
+            //Result
+            var result = JObject.Parse(await response.Content.ReadAsStringAsync());
+
+            //Get the top prediction
+            var prediction = result["predictions"].FirstOrDefault();
+            if (prediction == null) {
+                return;
             }
 
-            //Output highest guess
-            var pair = new KeyValuePair<double, string>(0, "");
-            foreach (var current in probabilities.Where(result => result.Key > pair.Key)) {
-                pair = current;
-            }
+            var predictionName = prediction["tagName"].ToString();
+            var predictionProbability = prediction["probability"].ToString();
 
-            Console.WriteLine(pair);
+            Console.WriteLine($"{predictionName} {predictionProbability}");
 
-            if (pair.Value.Equals("String") && pair.Key > 0.8) {
+            if (predictionName.Equals("String") && Convert.ToInt32(predictionProbability) > 0.8) {
                 await context.Message.ReplyAsync("This looks like String!");
             }
         }
 
-        
-        /// <summary>
-        /// Also taken from Microsoft Docs
-        /// Takes the image into a byte array for sending to Custom Vision for prediction
-        /// </summary>
-        /// <param name="imageFilePath">The filepath of the image to be turned into bytes</param>
-        /// <returns>An array of bytes to be sent to the Custom Vision endpoint</returns>
-        private static byte[] GetImageAsByteArray(string imageFilePath) {
-            var fileStream = new FileStream(imageFilePath, FileMode.Open, FileAccess.Read);
-            var binaryReader = new BinaryReader(fileStream);
-            return binaryReader.ReadBytes((int) fileStream.Length);
-        }
-        
-        
         /// <summary>
         /// Checks whether the current channel is blacklisted from reacting to images with Image Classification
         /// </summary>
@@ -144,7 +115,7 @@ namespace Stringdicator {
         private static async Task<bool> ChannelInImageBlacklist(SocketMessage message) {
             //Create new empty Blacklist file
             if (!File.Exists("BlacklistImages.xml")) {
-                var settings = new XmlWriterSettings {Async = true};
+                var settings = new XmlWriterSettings { Async = true };
                 var writer = XmlWriter.Create("BlacklistImages.xml", settings);
                 await writer.WriteElementStringAsync(null, "Channels", null, null);
                 writer.Close();
