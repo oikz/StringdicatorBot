@@ -83,7 +83,7 @@ namespace Stringdicator {
                     continue;
                 }
 
-                ImagePrediction.MakePrediction(attachment.Url, context);
+                ImagePrediction.MakePrediction(attachment.Url, context.Channel, context.User);
                 GC.Collect(); //To fix file in use errors
                 return;
             }
@@ -91,12 +91,12 @@ namespace Stringdicator {
             if (message.Content.StartsWith("https://tenor.com")) {
                 if (!message.Content.StartsWith("https://tenor.com/view")) {
                     var check = await _httpClient.GetAsync(new Uri(message.Content));
-                    ImagePrediction.MakePrediction(check.RequestMessage?.RequestUri + ".gif", context);
+                    ImagePrediction.MakePrediction(check.RequestMessage?.RequestUri + ".gif", context.Channel, context.User);
                     GC.Collect();
                     return;
                 }
 
-                ImagePrediction.MakePrediction(message.Content + ".gif", context);
+                ImagePrediction.MakePrediction(message.Content + ".gif", context.Channel, context.User);
                 GC.Collect();
             }
         }
