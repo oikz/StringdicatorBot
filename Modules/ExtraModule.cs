@@ -14,8 +14,9 @@ namespace Stringdicator.Modules {
     public class ExtraModule : InteractionModuleBase<SocketInteractionContext> {
         [SlashCommand("violations", "Shows number of No Anime violations for each member of this server")]
         public async Task Violations() {
+            await DeferAsync();
             if (!File.Exists("Violations.xml")) {
-                await RespondAsync("No Violations Recorded");
+                await FollowupAsync("No Violations Recorded");
                 return;
             }
 
@@ -58,7 +59,7 @@ namespace Stringdicator.Modules {
 
 
             //Send message
-            await RespondAsync(embed: builder.Build());
+            await FollowupAsync(embed: builder.Build());
         }
 
 
@@ -66,8 +67,9 @@ namespace Stringdicator.Modules {
         public async Task NoAnimeAsync(
             [Summary("user", "The user to record the violation for")]
             IUser user) {
+            await DeferAsync();
             var builder = await NoAnime(Context.Guild, user);
-            await RespondAsync(embed: builder.Build());
+            await FollowupAsync(embed: builder.Build());
         }
 
         public static async Task<EmbedBuilder> NoAnime(SocketGuild guild, IUser user) {
