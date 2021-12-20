@@ -52,6 +52,10 @@ namespace Stringdicator.Modules {
 
                 builder.WithDescription(description);
             } else {
+                if (moduleNumber >= commands.Modules.Count) {
+                    await RespondAsync("That module does not exist");
+                    return;
+                }
                 //Get the module chosen by the user
                 var module = commands.Modules.ElementAt(moduleNumber);
 
