@@ -11,6 +11,7 @@ using Discord.Commands;
 using Discord.Interactions;
 using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
+using Stringdicator.Modules;
 using Victoria;
 
 namespace Stringdicator {
@@ -54,6 +55,7 @@ namespace Stringdicator {
             _discordClient.InteractionCreated += HandleInteraction;
             _discordClient.MessageDeleted += HandleMessageDelete;
             _discordClient.MessageUpdated += HandleMessageUpdate;
+            _discordClient.ReactionAdded += HandleReactionAdded;
             _discordClient.Ready += HandleReady;
             
             await _interactions.AddModulesAsync(Assembly.GetEntryAssembly(),
@@ -167,6 +169,52 @@ namespace Stringdicator {
                 $"Message from {message.Author} in {channel.Name} was edited from {message} -> {newMessage}");
             await _logFile.WriteLineAsync(
                 $"{DateTime.Now}: Message from {message.Author} in {channel.Name} was edited from {message} -> {newMessage}");
+        }
+
+        /**
+         * Do stuff when a reaction is added
+         * Nightmare
+         */
+        private async Task HandleReactionAdded(Cacheable<IUserMessage, ulong> cachedMessage,
+            Cacheable<IMessageChannel, ulong> channel,
+            SocketReaction reaction) {
+            //Only want reactions to the bot message
+            if (!cachedMessage.Value.Author.Username.Equals(_discordClient.CurrentUser.Username)) {
+                return;
+            }
+
+            //Only noAnime messages
+            if (!cachedMessage.Value.Content.StartsWith("This looks like Anime")) {
+                return;
+            }
+            
+            //Is correct message
+            if (reaction.User.Value.Username.Equals(_discordClient.CurrentUser.Username)) {
+                return;
+            }
+            
+            cachedMessage.Value.Reactions.TryGetValue(new Emoji("\U0001F44D"), out var thumbsUp);
+            cachedMessage.Value.Reactions.TryGetValue(new Emoji("\U0001F44E"), out var thumbsDown);
+            if (thumbsUp.ReactionCount != 3 && thumbsDown.ReactionCount != 3) {
+                return;
+            }
+            
+
+            if (reaction.Emote.Equals(new Emoji("\U0001F44D"))) {
+                //Is thumbs up react and not made by stringdicator
+
+                await cachedMessage.Value.RemoveAllReactionsForEmoteAsync(new Emoji("\U0001F44D"));
+
+
+                var context = new SocketCommandContext(_discordClient,
+                    cachedMessage.Value as SocketUserMessage
+                );
+                Console.WriteLine(context.Message.Content.Split("- ")[1]);
+                var builder = await ExtraModule.NoAnime(context.Guild, context.User);
+                await context.Channel.SendMessageAsync(embed: builder.Build());
+            } else if (reaction.Emote.Equals(new Emoji("\U0001F44E"))) {
+                await channel.Value.DeleteMessageAsync(cachedMessage.Value);
+            }
         }
 
         /// <summary>

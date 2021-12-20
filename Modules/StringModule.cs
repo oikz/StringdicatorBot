@@ -40,7 +40,7 @@ namespace Stringdicator.Modules {
             builder.WithColor(3447003);
 
             //Send message
-            await RespondAsync(embed: builder.Build());
+            await FollowupAsync(embed: builder.Build());
             Console.WriteLine("String! - " + item.Link + " " + (startIndex + index));
         }
 
@@ -62,7 +62,7 @@ namespace Stringdicator.Modules {
             builder.WithColor(3447003);
 
             //Send message
-            await RespondAsync(embed: builder.Build());
+            await FollowupAsync(embed: builder.Build());
             Console.WriteLine("Stringsearch! - " + searchTerm + " " + item.Link);
 
             //Do an image classification prediction for stringsearch images as well
@@ -89,7 +89,7 @@ namespace Stringdicator.Modules {
                 return;
             }
             
-            await RespondAsync("String!");
+            await FollowupAsync("String!");
             await Context.Channel.SendFileAsync(new MemoryStream(image), "SPOILER_image.png");
 
             //Do an image classification prediction for stringsearch images as well

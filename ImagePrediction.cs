@@ -78,7 +78,7 @@ namespace Stringdicator {
         private static async Task MakePredictionRequest(byte[] image, ISocketMessageChannel channel, IUser author) {
             //Prediction endpoint
             const string url =
-                "https://string3-prediction.cognitiveservices.azure.com/customvision/v3.0/Prediction/b0ad2694-b2da-4342-835e-26d7bf6018fc/classify/iterations/String/image";
+                "https://string3-prediction.cognitiveservices.azure.com/customvision/v3.0/Prediction/fc50bffa-e84d-4043-b691-58c1e27a35d7/classify/iterations/NoAnime3/image";
 
             // Sends the image as a byte array to the endpoint to run a prediction on it
             using var content = new ByteArrayContent(image);
@@ -105,8 +105,11 @@ namespace Stringdicator {
             Console.WriteLine($"{predictionName} {predictionProbability}");
 
             //Message response
-            if (predictionName.Equals("String") && Convert.ToDouble(predictionProbability) > 0.8) {
-                await channel.SendMessageAsync("This looks like String - " + author.Mention);
+            if (predictionName.Equals("Anime") && Convert.ToDouble(predictionProbability) > 0.8) {
+                var newMessage =
+                    await channel.SendMessageAsync("This looks like Anime - " + author.Mention);
+                await newMessage.AddReactionAsync(new Emoji("\U0001F44D")); //Thumbs up react
+                await newMessage.AddReactionAsync(new Emoji("\U0001F44E")); //Thumbs down react
             }
         }
 
