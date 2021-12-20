@@ -4,21 +4,19 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using Discord;
-using Discord.Commands;
+using Discord.Interactions;
 
 namespace Stringdicator.Modules {
     /// <summary>
     /// Module for miscellaneous commands that users can use
     /// </summary>
-    [Summary("Miscellaneous Commands")]
-    public class MiscModule : ModuleBase<SocketCommandContext> {
+    [Discord.Commands.Summary("Miscellaneous Commands")]
+    public class MiscModule : InteractionModuleBase<SocketInteractionContext> {
         /// <summary>
         /// Blacklist a channel from being accessible to commands
         /// Using the command again un-blacklists the channel
         /// </summary>
-        [Command("StringBlacklist")]
-        [Summary("Blacklist this channel from receiving commands")]
-        [Alias("SB")]
+        [SlashCommand("blacklist", "Blacklist this channel from receiving commands")]
         private async Task BlacklistChannelAsync() {
             var stream = File.Open("Blacklist.xml", FileMode.Open);
             var document = await XDocument.LoadAsync(stream, LoadOptions.None, CancellationToken.None);
@@ -41,7 +39,7 @@ namespace Stringdicator.Modules {
                 channels?.Add(new XElement("Channel", Context.Channel.Id));
             }
 
-            await ReplyAsync("", false, builder.Build());
+            await RespondAsync(embed: builder.Build());
 
             //Cleanup and save
             stream.Close();
@@ -53,9 +51,7 @@ namespace Stringdicator.Modules {
         /// Blacklist a channel from being accessible to commands
         /// Using the command again un-blacklists the channel
         /// </summary>
-        [Command("StringBlacklistImages")]
-        [Summary("Blacklist this channel from reacting to images")]
-        [Alias("SBI")]
+        [SlashCommand("blacklistimages", "Blacklist this channel from reacting to images")]
         private async Task BlacklistChannelImageAsync() {
             var stream = File.Open("BlacklistImages.xml", FileMode.Open);
             var document = await XDocument.LoadAsync(stream, LoadOptions.None, CancellationToken.None);
@@ -78,7 +74,7 @@ namespace Stringdicator.Modules {
                 channels?.Add(new XElement("Channel", Context.Channel.Id));
             }
 
-            await ReplyAsync("", false, builder.Build());
+            await RespondAsync(embed: builder.Build());
 
             //Cleanup and save
             stream.Close();

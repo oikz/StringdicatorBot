@@ -4,7 +4,8 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Discord;
-using Discord.Commands;
+using Discord.Interactions;
+using Discord.WebSocket;
 using GoogleApi;
 using GoogleApi.Entities.Search.Common;
 using GoogleApi.Entities.Search.Image.Request;
@@ -13,16 +14,15 @@ namespace Stringdicator.Modules {
     /// <summary>
     /// Module containing the String Image modules
     /// </summary>
-    [Summary("String Commands")]
-    public class StringModule : ModuleBase<SocketCommandContext> {
+    [Discord.Commands.Summary("String Commands")]
+    public class StringModule : InteractionModuleBase<SocketInteractionContext> {
         public HttpClient HttpClient { get; set; }
+        public DiscordSocketClient DiscordClient { get; set; }
 
         /// <summary>
         /// String! - Googles "ball of string" and returns one of the top 190 images
         /// </summary>
-        [Command("String")]
-        [Summary("Finds a string image")]
-        [Alias("S")]
+        [SlashCommand("string", "Finds a string image")]
         private async Task StringAsync() {
             //Setup and send search request
             var random = new Random(); //Nice
@@ -40,7 +40,7 @@ namespace Stringdicator.Modules {
             builder.WithColor(3447003);
 
             //Send message
-            await Context.Channel.SendMessageAsync("", false, builder.Build());
+            await RespondAsync(embed: builder.Build());
             Console.WriteLine("String! - " + item.Link + " " + (startIndex + index));
         }
 
@@ -49,10 +49,8 @@ namespace Stringdicator.Modules {
         /// Google Image Searches for a given search term and sends an embedded message containing a random search result
         /// </summary>
         /// <param name="searchTerm">The string term to be searched</param>
-        [Command("Stringsearch")]
-        [Summary("Finds a searched image")]
-        [Alias("SSR")]
-        private async Task StringSearchAsync([Remainder] string searchTerm) {
+        [SlashCommand("stringsearch", "Finds a searched image")]
+        private async Task StringSearchAsync([Discord.Interactions.Summary("search-term", "The search query to find and image for")] string searchTerm) {
             var items = await ImageSearch(searchTerm);
             var random = new Random();
             var item = items[random.Next(0, items.Length)];
@@ -64,11 +62,11 @@ namespace Stringdicator.Modules {
             builder.WithColor(3447003);
 
             //Send message
-            await Context.Channel.SendMessageAsync("", false, builder.Build());
+            await RespondAsync(embed: builder.Build());
             Console.WriteLine("Stringsearch! - " + searchTerm + " " + item.Link);
 
             //Do an image classification prediction for stringsearch images as well
-            ImagePrediction.MakePrediction(item.Link, Context);
+            ImagePrediction.MakePrediction(item.Link, Context.Channel, Context.Interaction.User);
             GC.Collect();
             //Call the prediction method
         }
@@ -77,10 +75,8 @@ namespace Stringdicator.Modules {
         /// Google Image Searches for a given search term and sends an spoilered message containing a random search result
         /// </summary>
         /// <param name="searchTerm">The string term to be searched</param>
-        [Command("StringsearchSpoiler")]
-        [Summary("Finds a searched image")]
-        [Alias("SSRS")]
-        private async Task StringSearchSpoilerAsync([Remainder] string searchTerm) {
+        [SlashCommand("stringsearchspoiler", "Finds a searched image and spoilers it")]
+        private async Task StringSearchSpoilerAsync([Discord.Interactions.Summary("search-term", "The search query to find and image for")] string searchTerm) {
             var items = await ImageSearch(searchTerm);
             var random = new Random();
             var item = items[random.Next(0, items.Length)];
@@ -93,10 +89,11 @@ namespace Stringdicator.Modules {
                 return;
             }
             
+            await RespondAsync("String!");
             await Context.Channel.SendFileAsync(new MemoryStream(image), "SPOILER_image.png");
 
             //Do an image classification prediction for stringsearch images as well
-            ImagePrediction.MakePrediction(item.Link, Context);
+            ImagePrediction.MakePrediction(item.Link, Context.Channel, Context.Interaction.User);
             GC.Collect();
             //Call the prediction method
         }

@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
 using Discord;
-using Discord.Commands;
 using Discord.WebSocket;
 using Newtonsoft.Json.Linq;
 
@@ -21,9 +20,10 @@ namespace Stringdicator {
         /// Take a given file url/attachment and set it up for Custom Vision prediction
         /// </summary>
         /// <param name="attachmentUrl">The url of the attachment to be sent for prediction</param>
-        /// <param name="context">The Context of the message, used for replying to the user</param>
-        public static async void MakePrediction(string attachmentUrl, SocketCommandContext context) {
-            if (await ChannelInImageBlacklist(context.Message)) {
+        /// <param name="channel">The channel of the message, used for replying to the user</param>
+        /// <param name="author">The author of the original message</param>
+        public static async void MakePrediction(string attachmentUrl, ISocketMessageChannel channel, IUser author) {
+            if (await ChannelInImageBlacklist(channel)) {
                 return;
             }
 
@@ -59,12 +59,13 @@ namespace Stringdicator {
                     await using var stream = new MemoryStream();
                     bitmap.Save(stream, System.Drawing.Imaging.ImageFormat.Png);
                     image = stream.ToArray();
-                } catch (OutOfMemoryException) {
+                } catch (Exception exception) {
+                    Console.WriteLine("Error: " + exception.Message);
                     return;
                 }
             }
 
-            await MakePredictionRequest(image, context);
+            await MakePredictionRequest(image, channel, author);
         }
 
         /// <summary>
@@ -72,8 +73,9 @@ namespace Stringdicator {
         /// Mostly taken from the Microsoft Docs for Custom Vision
         /// </summary>
         /// <param name="image">The image to be sent in bytes</param>
-        /// <param name="context">The Context of the message, used for replying to the user</param>
-        private static async Task MakePredictionRequest(byte[] image, SocketCommandContext context) {
+        /// <param name="channel">The channel of the message, used for replying to the user</param>
+        /// <param name="author">The author of the original message</param>
+        private static async Task MakePredictionRequest(byte[] image, ISocketMessageChannel channel, IUser author) {
             //Prediction endpoint
             const string url =
                 "https://string3-prediction.cognitiveservices.azure.com/customvision/v3.0/Prediction/b0ad2694-b2da-4342-835e-26d7bf6018fc/classify/iterations/String/image";
@@ -102,17 +104,18 @@ namespace Stringdicator {
 
             Console.WriteLine($"{predictionName} {predictionProbability}");
 
+            //Message response
             if (predictionName.Equals("String") && Convert.ToDouble(predictionProbability) > 0.8) {
-                await context.Message.ReplyAsync("This looks like String!");
+                await channel.SendMessageAsync("This looks like String - " + author.Mention);
             }
         }
 
         /// <summary>
         /// Checks whether the current channel is blacklisted from reacting to images with Image Classification
         /// </summary>
-        /// <param name="message">The message sent</param>
+        /// <param name="channel">The channel the message was sent in</param>
         /// <returns>True if in the blacklist, false otherwise</returns>
-        private static async Task<bool> ChannelInImageBlacklist(SocketMessage message) {
+        private static async Task<bool> ChannelInImageBlacklist(ISocketMessageChannel channel) {
             //Create new empty Blacklist file
             if (!File.Exists("BlacklistImages.xml")) {
                 var settings = new XmlWriterSettings { Async = true };
@@ -128,7 +131,7 @@ namespace Stringdicator {
             //If the xml file contains this channel - is blacklisted, don't react to messages
             var address =
                 from element in root.Elements("Channel")
-                where element.Value == message.Channel.Id.ToString()
+                where element.Value == channel.Id.ToString()
                 select element;
             return address.Any();
         }
