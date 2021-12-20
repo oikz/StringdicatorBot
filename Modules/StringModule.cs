@@ -98,7 +98,8 @@ namespace Stringdicator.Modules {
             //Call the prediction method
         }
 
-        private static async Task<Item[]> ImageSearch(string searchTerm, int startIndex = 0) {
+        private async Task<Item[]> ImageSearch(string searchTerm, int startIndex = 0) {
+            await DeferAsync();
             //Setup and send search request
             var request = new ImageSearchRequest {
                 Query = searchTerm,
