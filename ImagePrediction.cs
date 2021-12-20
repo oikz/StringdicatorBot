@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
 using Discord;
-using Discord.Commands;
 using Discord.WebSocket;
 using Newtonsoft.Json.Linq;
 
