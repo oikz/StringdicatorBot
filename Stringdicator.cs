@@ -3,7 +3,7 @@ using System.IO;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Discord;
-using Discord.Commands;
+using Discord.Interactions;
 using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
 using Stringdicator.Services;
@@ -16,7 +16,7 @@ namespace Stringdicator {
     /// </summary>
     class Stringdicator {
         private readonly DiscordSocketClient _discordClient;
-        private readonly CommandService _commands;
+        private readonly InteractionService _interactions;
         private readonly HttpClient _httpClient;
 
         private Stringdicator() {
@@ -25,10 +25,9 @@ namespace Stringdicator {
                 MessageCacheSize = 250,
                 AlwaysDownloadUsers = true
             });
-
-            _commands = new CommandService(new CommandServiceConfig {
-                LogLevel = LogSeverity.Info,
-                CaseSensitiveCommands = false
+            
+            _interactions = new InteractionService(_discordClient, new InteractionServiceConfig() {
+                LogLevel = LogSeverity.Info
             });
 
             _httpClient = new HttpClient();
@@ -55,7 +54,7 @@ namespace Stringdicator {
             //Create the ServiceProvider for dependency injection
             var services = new ServiceCollection()
                 .AddSingleton(_discordClient)
-                .AddSingleton(_commands)
+                .AddSingleton(_interactions)
                 .AddSingleton(_httpClient)
                 .AddSingleton<CommandHandler>()
                 .AddSingleton<MusicService>()
@@ -68,7 +67,7 @@ namespace Stringdicator {
 
             ImagePrediction.HttpClient = services.GetRequiredService<HttpClient>();
 
-            var handler = new CommandHandler(_discordClient, _commands, services, _httpClient);
+            var handler = new CommandHandler(_discordClient, _interactions, services, _httpClient);
             await handler.InstallCommandsAsync();
 
             // Block this task until the program is closed.

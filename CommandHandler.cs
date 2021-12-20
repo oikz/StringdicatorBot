@@ -8,6 +8,7 @@ using System.Xml;
 using System.Xml.Linq;
 using Discord;
 using Discord.Commands;
+using Discord.Interactions;
 using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
 using Victoria;
@@ -19,9 +20,9 @@ namespace Stringdicator {
     /// </summary>
     public class CommandHandler {
         private readonly DiscordSocketClient _discordClient;
-        private readonly CommandService _commands;
+        private readonly InteractionService _interactions;
         private StreamWriter _logFile;
-        private readonly ServiceProvider _services;
+        private readonly IServiceProvider _services;
         private readonly LavaNode _lavaNode;
         private readonly HttpClient _httpClient;
 
@@ -30,13 +31,14 @@ namespace Stringdicator {
         /// Constructor for the CommandHandler to initialise the values needed to run
         /// </summary>
         /// <param name="client">This discord client object</param>
-        /// <param name="commands">The CommandService to be used</param>
+        /// <param name="interactions">The InteractionService to be used</param>
         /// <param name="services">The ServiceProvider to be used</param>
-        public CommandHandler(DiscordSocketClient client, CommandService commands, ServiceProvider services,
+        /// <param name="httpClient">The HTTPClient to be used</param>
+        public CommandHandler(DiscordSocketClient client, InteractionService interactions, IServiceProvider services,
             HttpClient httpClient) {
-            _commands = commands;
             _discordClient = client;
             _services = services;
+            _interactions = interactions;
             _lavaNode = _services.GetRequiredService<LavaNode>();
             _httpClient = httpClient;
         }
@@ -49,13 +51,12 @@ namespace Stringdicator {
             _logFile = new StreamWriter("log.txt");
             // Hook the MessageReceived event into our command handler
             _discordClient.MessageReceived += HandleCommandAsync;
+            _discordClient.InteractionCreated += HandleInteraction;
             _discordClient.MessageDeleted += HandleMessageDelete;
             _discordClient.MessageUpdated += HandleMessageUpdate;
             _discordClient.Ready += HandleReady;
-
-            // If you do not use Dependency Injection, pass null.
-            // See Dependency Injection guide for more information.
-            await _commands.AddModulesAsync(Assembly.GetEntryAssembly(),
+            
+            await _interactions.AddModulesAsync(Assembly.GetEntryAssembly(),
                 _services);
             await _discordClient.SetGameAsync("with String!");
         }
@@ -73,9 +74,7 @@ namespace Stringdicator {
 
             // Create a WebSocket-based command context based on the message
             var context = new SocketCommandContext(_discordClient, message);
-
-            //Ignore all channels in the blacklist
-            if (await ChannelInBlacklist(message)) return;
+            
 
             //Check each attachment posted by the user and if its an image (checked inside MakePrediction(), do a prediction
             var attachments = message.Attachments;
@@ -99,24 +98,18 @@ namespace Stringdicator {
 
                 ImagePrediction.MakePrediction(message.Content + ".gif", context);
                 GC.Collect();
+            }
+        }
+
+        private async Task HandleInteraction(SocketInteraction interaction) {
+            //Ignore all channels in the blacklist
+            if (await ChannelInBlacklist(interaction)) {
+                await interaction.RespondAsync("This channel is blacklisted", ephemeral: true);
                 return;
             }
-
-
-            // Create a number to track where the prefix ends and the command begins
-            var startPos = 0;
-
-            // Determine if the message is a command based on the prefix
-            if (!(message.HasCharPrefix('!', ref startPos) ||
-                  message.HasMentionPrefix(_discordClient.CurrentUser, ref startPos)))
-                return;
-
-            // Execute the command with the command context we just
-            // created, along with the service provider for precondition checks.
-            await _commands.ExecuteAsync(
-                context,
-                startPos,
-                _services);
+            
+            var context = new SocketInteractionContext(_discordClient, interaction);
+            await _interactions.ExecuteCommandAsync(context, _services);
         }
 
 
@@ -126,7 +119,7 @@ namespace Stringdicator {
         /// <param name="cachedMessage">The message that was deleted</param>
         /// <param name="channel">The channel it was located in</param>
         /// <returns>A Task</returns>
-        private Task HandleMessageDelete(Cacheable<IMessage, ulong> cachedMessage, ISocketMessageChannel channel) {
+        private Task HandleMessageDelete(Cacheable<IMessage, ulong> cachedMessage, Cacheable<IMessageChannel, ulong> channel) {
             // check if the message exists in cache; if not, we cannot report what was removed
             if (!cachedMessage.HasValue) {
                 return Task.CompletedTask;
@@ -140,10 +133,10 @@ namespace Stringdicator {
 
             var message = cachedMessage.Value;
             Console.WriteLine(
-                $"Message from {message.Author} was removed from the channel {channel.Name}: \n"
+                $"Message from {message.Author} was removed from the channel {channel.Value.Name}: \n"
                 + message.Content);
             _logFile.WriteLine(
-                $"{DateTime.Now}: Message from {message.Author} was removed from the channel {channel.Name}: \n"
+                $"{DateTime.Now}: Message from {message.Author} was removed from the channel {channel.Value.Name}: \n"
                 + message.Content);
 
             return Task.CompletedTask;
@@ -185,19 +178,18 @@ namespace Stringdicator {
             if (!_lavaNode.IsConnected) {
                 await _lavaNode.ConnectAsync();
             }
+            
+            await _interactions.RegisterCommandsToGuildAsync(Convert.ToUInt64(Environment.GetEnvironmentVariable("DEV_GUILD_ID")));
         }
 
         /// <summary>
         /// Check if a channel is in the blacklist and ignore it if so
         /// </summary>
-        private async Task<bool> ChannelInBlacklist(SocketMessage message) {
-            var commands = _commands.Commands.FirstOrDefault(command => command.Name.Equals("StringBlacklist"));
-            //Always allow blacklist commands to work to un-blacklist a channel
-            if (commands.Aliases.Any(a => a.Equals(message.Content.Replace("!", "")))) {
+        private async Task<bool> ChannelInBlacklist(SocketInteraction interaction) {
+            if ((interaction as SocketSlashCommand)?.CommandName == "blacklist") {
                 return false;
             }
-
-
+            
             //Create new empty Blacklist file
             if (!File.Exists("Blacklist.xml")) {
                 var settings = new XmlWriterSettings { Async = true };
@@ -219,7 +211,7 @@ namespace Stringdicator {
             //If the xml file contains this channel - is blacklisted, don't react to messages
             var address =
                 from element in root.Elements("Channel")
-                where element.Value == message.Channel.Id.ToString()
+                where element.Value == interaction.Channel.Id.ToString()
                 select element;
             return address.Any();
         }
