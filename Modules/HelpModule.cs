@@ -1,25 +1,28 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using Discord;
-using Discord.Commands;
-using Microsoft.Extensions.DependencyInjection;
+using Discord.Interactions;
+using Discord.WebSocket;
 
 namespace Stringdicator.Modules {
     /// <summary>
     /// Module containing the base help command that displays all available commands
     /// </summary>
-    [Summary("Help Commands")]
-    public class HelpModule : ModuleBase<SocketCommandContext> {
-        private readonly ServiceProvider _serviceProvider;
+    public class HelpModule : InteractionModuleBase<SocketInteractionContext> {
+        private readonly DiscordSocketClient _discordClient;
+        private readonly IServiceProvider _serviceProvider;
 
         /// <summary>
         /// Constructor for the Help Module for saving the serviceProvider for command displaying
         /// </summary>
-        /// <param name="serviceProvider">The serviceProvider used in the rest of the project</param>
-        public HelpModule(ServiceProvider serviceProvider) {
+        /// <param name="discordClient">The discordClient used in this module for displaying commands</param>
+        /// <param name="serviceProvider">The serviceProvider used in this module for displaying commands</param>
+        public HelpModule(DiscordSocketClient discordClient, IServiceProvider serviceProvider) {
             _serviceProvider = serviceProvider;
+            _discordClient = discordClient;
         }
 
         /// <summary>
@@ -27,30 +30,29 @@ namespace Stringdicator.Modules {
         /// Listed commands are affected by the moduleNumber as a page number
         /// </summary>
         /// <param name="moduleNumber">The page number the user wishes to view</param>
-        [Command("Stringdicator")]
-        [Summary("List Modules or View Specific Module's Commands")]
-        [Alias("StringHelp")]
-        private async Task HelpAsync([Remainder] int moduleNumber = -1) {
+        [SlashCommand("stringdicator", "Get the help command for the bot")]
+        private async Task HelpAsync([Summary("Page", "The page number you wish to view")] int moduleNumber = -1) {
             moduleNumber--;
-            
+
             //Kinda jank but gets all the commands again
-            var commands = new CommandService();
+            var commands = new InteractionService(_discordClient);
             await commands.AddModulesAsync(Assembly.GetEntryAssembly(),
                 _serviceProvider);
             var builder = new EmbedBuilder();
             builder.WithThumbnailUrl(Context.Client.CurrentUser.GetAvatarUrl());
             builder.WithColor(3447003);
             builder.WithDescription("");
-            
+
             if (moduleNumber < 0) {
                 //Display the list of modules
                 builder.WithTitle("Available Stringdicator Modules: ");
-                for (var i = 0; i < commands.Modules.Count(); i++) {
-                    builder.AddField(new EmbedFieldBuilder
-                        {Name = $"{i + 1} - {commands.Modules.ElementAt(i).Name}", Value = commands.Modules.ElementAt(i).Summary});
+                var description = "";
+                for (var i = 0; i < commands.Modules.Count; i++) {
+                    description += $"{i + 1} - {commands.Modules.ElementAt(i).Name}\n";
                 }
-            } else {
 
+                builder.WithDescription(description);
+            } else {
                 //Get the module chosen by the user
                 var module = commands.Modules.ElementAt(moduleNumber);
 
@@ -60,30 +62,14 @@ namespace Stringdicator.Modules {
 
 
                 //Show each module's commands separately
-                foreach (var command in module.Commands) {
-                    //Get all the aliases for each command and output them next to the title of the command
-                    var aliasBuilder = new StringBuilder();
-                    foreach (var alias in command.Aliases) {
-                        if (alias.Equals(command.Name.ToLower())) continue;
-                        if (aliasBuilder.ToString() == "") {
-                            aliasBuilder.Append(alias);
-                            continue;
-                        }
-
-                        aliasBuilder.Append($", {alias}");
-                    }
-
-                    //Add square brackets around any aliases
-                    var aliases = aliasBuilder.ToString().Any() ? $"[{aliasBuilder}]" : "";
-
+                foreach (var command in module.SlashCommands) {
                     var fieldBuilder = new EmbedFieldBuilder
-                        {Name = $"{command.Name} {aliases}", Value = command.Summary};
-                    //line += $"**{command.Name} {aliases}** - {command.Summary}\n";
+                        { Name = $"{command.Name}", Value = command.Description };
                     builder.AddField(fieldBuilder);
                 }
             }
 
-            await ReplyAsync("", false, builder.Build());
+            await RespondAsync(embed: builder.Build());
         }
     }
 }
