@@ -178,8 +178,15 @@ namespace Stringdicator {
             if (!_lavaNode.IsConnected) {
                 await _lavaNode.ConnectAsync();
             }
-            
-            await _interactions.RegisterCommandsToGuildAsync(Convert.ToUInt64(Environment.GetEnvironmentVariable("DEV_GUILD_ID")));
+
+            try {
+                await _interactions.RegisterCommandsToGuildAsync(
+                    Convert.ToUInt64(Environment.GetEnvironmentVariable("DEV_GUILD_ID")));
+            } catch (Exception) {
+                //Don't create guild commands
+            }
+
+            await _interactions.RegisterCommandsGloballyAsync();
         }
 
         /// <summary>
