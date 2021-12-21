@@ -209,9 +209,12 @@ namespace Stringdicator {
                 var context = new SocketCommandContext(_discordClient,
                     cachedMessage.Value as SocketUserMessage
                 );
-                Console.WriteLine(context.Message.Content.Split("- ")[1]);
-                var builder = await ExtraModule.NoAnime(context.Guild, context.User);
-                await context.Channel.SendMessageAsync(embed: builder.Build());
+                var mention = cachedMessage.Value.Content.Split("- ")[1];
+                foreach (var user in context.Guild.Users) {
+                    if (!user.Mention.Equals(mention)) continue;
+                    var builder = await ExtraModule.NoAnime(context.Guild, user);
+                    await context.Channel.SendMessageAsync(embed: builder.Build());
+                }
             } else if (reaction.Emote.Equals(new Emoji("\U0001F44E"))) {
                 await channel.Value.DeleteMessageAsync(cachedMessage.Value);
             }
