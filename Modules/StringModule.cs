@@ -49,7 +49,7 @@ namespace Stringdicator.Modules {
         /// Google Image Searches for a given search term and sends an embedded message containing a random search result
         /// </summary>
         /// <param name="searchTerm">The string term to be searched</param>
-        [SlashCommand("stringsearch", "Finds a searched image")]
+        [SlashCommand("search", "Finds a searched image")]
         private async Task StringSearchAsync([Discord.Interactions.Summary("search-term", "The search query to find and image for")] string searchTerm) {
             var items = await ImageSearch(searchTerm);
             var random = new Random();
@@ -75,7 +75,7 @@ namespace Stringdicator.Modules {
         /// Google Image Searches for a given search term and sends an spoilered message containing a random search result
         /// </summary>
         /// <param name="searchTerm">The string term to be searched</param>
-        [SlashCommand("stringsearchspoiler", "Finds a searched image and spoilers it")]
+        [SlashCommand("spoiler", "Finds a searched image and spoilers it")]
         private async Task StringSearchSpoilerAsync([Discord.Interactions.Summary("search-term", "The search query to find and image for")] string searchTerm) {
             var items = await ImageSearch(searchTerm);
             var random = new Random();
