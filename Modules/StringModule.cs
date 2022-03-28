@@ -39,8 +39,10 @@ namespace Stringdicator.Modules {
             builder.WithImageUrl(item.Link);
             builder.WithColor(3447003);
 
+            var buttons = new ComponentBuilder().WithButton(customId: "string-reroll", label: "Search Again");
+            
             //Send message
-            await FollowupAsync(embed: builder.Build());
+            await FollowupAsync(embed: builder.Build(), components: buttons.Build());
             Console.WriteLine("String! - " + item.Link + " " + (startIndex + index));
         }
 
@@ -50,19 +52,22 @@ namespace Stringdicator.Modules {
         /// </summary>
         /// <param name="searchTerm">The string term to be searched</param>
         [SlashCommand("search", "Finds a searched image")]
-        private async Task StringSearchAsync([Discord.Interactions.Summary("search-term", "The search query to find and image for")] string searchTerm) {
+        private async Task StringSearchAsync([Summary("search-term", "The search query to find and image for")] string searchTerm) {
             var items = await ImageSearch(searchTerm);
             var random = new Random();
             var item = items[random.Next(0, items.Length)];
 
             //Create an embed using that image url
             var builder = new EmbedBuilder();
-            builder.WithTitle("Stringsearch!");
+            builder.WithTitle("Stringsearch! - " + searchTerm);
             builder.WithImageUrl(item.Link);
             builder.WithColor(3447003);
 
+            var buttons = new ComponentBuilder().WithButton(customId: "string-reroll", label: "Search Again");
+
             //Send message
-            await FollowupAsync(embed: builder.Build());
+            await FollowupAsync(embed: builder.Build(), components: buttons.Build());
+            
             Console.WriteLine("Stringsearch! - " + searchTerm + " " + item.Link);
 
             //Do an image classification prediction for stringsearch images as well
@@ -76,7 +81,7 @@ namespace Stringdicator.Modules {
         /// </summary>
         /// <param name="searchTerm">The string term to be searched</param>
         [SlashCommand("spoiler", "Finds a searched image and spoilers it")]
-        private async Task StringSearchSpoilerAsync([Discord.Interactions.Summary("search-term", "The search query to find and image for")] string searchTerm) {
+        private async Task StringSearchSpoilerAsync([Summary("search-term", "The search query to find and image for")] string searchTerm) {
             var items = await ImageSearch(searchTerm);
             var random = new Random();
             var item = items[random.Next(0, items.Length)];
@@ -98,6 +103,12 @@ namespace Stringdicator.Modules {
             //Call the prediction method
         }
 
+        /// <summary>
+        /// Base Image search method that returns a list of search results
+        /// </summary>
+        /// <param name="searchTerm">The search query</param>
+        /// <param name="startIndex">At what index to start searching from</param>
+        /// <returns>A list of search results</returns>
         private async Task<Item[]> ImageSearch(string searchTerm, int startIndex = 0) {
             await DeferAsync();
             //Setup and send search request
@@ -116,6 +127,28 @@ namespace Stringdicator.Modules {
 
             //Pick a random search result
             return response.Items.ToArray();
+        }
+        
+        /// <summary>
+        /// A re-roll button for the stringsearch command to get a new image
+        /// </summary>
+        [ComponentInteraction("string-reroll")]
+        public async Task ReRoll() {
+            var searchTerm = ((SocketMessageComponent)Context.Interaction).Message.Embeds.ElementAt(0).Title
+                .Replace("Stringsearch! -", "");
+            var items = await ImageSearch(searchTerm);
+            var random = new Random();
+            var item = items[random.Next(0, items.Length)];
+            
+            //Create an embed using that image url
+            var builder = new EmbedBuilder();
+            builder.WithTitle("Stringsearch! -" + searchTerm);
+            builder.WithImageUrl(item.Link);
+            builder.WithColor(3447003);
+            
+            await ((SocketMessageComponent)Context.Interaction).ModifyOriginalResponseAsync(x => {
+                x.Embed = builder.Build();
+            });
         }
     }
 }
