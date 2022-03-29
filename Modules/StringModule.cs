@@ -30,6 +30,8 @@ namespace Stringdicator.Modules {
 
             //Pick a random search result
             var items = await ImageSearch("Ball of String", startIndex);
+            if (items.Length == 0) return;
+
             var index = random.Next(0, items.Length);
             var item = items[index];
 
@@ -54,6 +56,8 @@ namespace Stringdicator.Modules {
         [SlashCommand("search", "Finds a searched image")]
         private async Task StringSearchAsync([Summary("search-term", "The search query to find and image for")] string searchTerm) {
             var items = await ImageSearch(searchTerm);
+            if (items.Length == 0) return;
+
             var random = new Random();
             var item = items[random.Next(0, items.Length)];
 
@@ -83,6 +87,8 @@ namespace Stringdicator.Modules {
         [SlashCommand("spoiler", "Finds a searched image and spoilers it")]
         private async Task StringSearchSpoilerAsync([Summary("search-term", "The search query to find and image for")] string searchTerm) {
             var items = await ImageSearch(searchTerm);
+            if (items.Length == 0) return;
+            
             var random = new Random();
             var item = items[random.Next(0, items.Length)];
 
@@ -125,8 +131,12 @@ namespace Stringdicator.Modules {
             var response =
                 await GoogleSearch.ImageSearch.QueryAsync(request);
 
+            //No results
+            if (response.Items is not null) return response.Items.ToArray();
+            await FollowupAsync($"No results found for \"{searchTerm}\"");
+            return Array.Empty<Item>();
+
             //Pick a random search result
-            return response.Items.ToArray();
         }
         
         /// <summary>
