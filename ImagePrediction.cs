@@ -75,10 +75,10 @@ namespace Stringdicator {
         /// <param name="image">The image to be sent in bytes</param>
         /// <param name="channel">The channel of the message, used for replying to the user</param>
         /// <param name="author">The author of the original message</param>
-        private static async Task MakePredictionRequest(byte[] image, ISocketMessageChannel channel, IUser author) {
+        private static async Task MakePredictionRequest(byte[] image, ISocketMessageChannel channel, IMentionable author) {
             //Prediction endpoint
             const string url =
-                "https://string3-prediction.cognitiveservices.azure.com/customvision/v3.0/Prediction/fc50bffa-e84d-4043-b691-58c1e27a35d7/classify/iterations/NoAnime3/image";
+                "https://string3-prediction.cognitiveservices.azure.com/customvision/v3.0/Prediction/fc50bffa-e84d-4043-b691-58c1e27a35d7/classify/iterations/NoAnime4/image";
 
             // Sends the image as a byte array to the endpoint to run a prediction on it
             using var content = new ByteArrayContent(image);
