@@ -7,6 +7,7 @@ using Discord;
 using Discord.Interactions;
 using Discord.WebSocket;
 using GoogleApi;
+using GoogleApi.Entities.Search;
 using GoogleApi.Entities.Search.Common;
 using GoogleApi.Entities.Search.Image.Request;
 
@@ -128,8 +129,15 @@ namespace Stringdicator.Modules {
             };
 
             //Gets the search response - contains info about search
-            var response =
-                await GoogleSearch.ImageSearch.QueryAsync(request);
+            BaseSearchResponse response;
+            try {
+                response = await GoogleSearch.ImageSearch.QueryAsync(request);
+            } catch (Exception exception) {
+                Console.WriteLine("Error: " + exception.Message);
+                await FollowupAsync($"An error occurred searching for \"{searchTerm}\" \n" +
+                                    "Perhaps the Google Search quota has been reached?");
+                return Array.Empty<Item>();
+            }
 
             //No results
             if (response.Items is not null) return response.Items.ToArray();
