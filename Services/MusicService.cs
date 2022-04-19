@@ -42,7 +42,7 @@ namespace Stringdicator.Services {
                 return;
             }
 
-            if (args.Player.Track is null) {
+            if (args.Player.Track is null && args.Player.PlayerState != PlayerState.Stopped) {
                 await args.Player.SkipAsync();
             }
 
@@ -63,7 +63,7 @@ namespace Stringdicator.Services {
             var voiceChannelUsers = (player.VoiceChannel as SocketVoiceChannel)?.Users
                 .Where(x => !x.IsBot)
                 .ToArray();
-            if (!(voiceChannelUsers ?? Array.Empty<SocketGuildUser>()).Any()) {
+            if (!(voiceChannelUsers ?? Array.Empty<SocketGuildUser>()).Any()) { // Doesn't leave when it finishes
                 await _lavaNode.LeaveAsync(player.VoiceChannel);
                 return;
             }
