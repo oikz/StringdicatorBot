@@ -61,7 +61,7 @@ namespace Stringdicator.Modules {
         /// </summary>
         [SlashCommand("leave", "Leave the voice channel that the user is currently in")]
         private async Task LeaveAsync() {
-            if (!UserInVoice().Result) {
+            if (!UserInVoice().Result || !BotInVoice().Result) {
                 return;
             }
 
@@ -81,6 +81,7 @@ namespace Stringdicator.Modules {
             if (!UserInVoice().Result) {
                 return;
             }
+            await DeferAsync();
 
             //Join the voice channel if not already in it
             if (!_lavaNode.HasPlayer(Context.Guild)) {
@@ -128,6 +129,7 @@ namespace Stringdicator.Modules {
             if (!UserInVoice().Result) {
                 return;
             }
+            await DeferAsync();
 
             //Join the voice channel if not already in it
             if (!_lavaNode.HasPlayer(Context.Guild)) {
@@ -228,9 +230,10 @@ namespace Stringdicator.Modules {
         /// </summary>
         [SlashCommand("skip", "Skips the currently playing Track")]
         private async Task SkipAsync([Summary("index", "The index of the track to skip")] int index = 0) {
-            if (!UserInVoice().Result) {
+            if (!UserInVoice().Result || !BotInVoice().Result) {
                 return;
             }
+            await DeferAsync();
             
             var player = _lavaNode.GetPlayer(Context.Guild);
 
@@ -258,12 +261,12 @@ namespace Stringdicator.Modules {
                 });
             } else {
                 await _lavaNode.LeaveAsync(player.VoiceChannel);
-                await RespondAsync("Leaving", ephemeral: true);
+                await FollowupAsync("Leaving");
                 return;
             }
 
             builder.WithColor(3447003);
-            await RespondAsync(embed: builder.Build());
+            await FollowupAsync(embed: builder.Build());
 
             try {
                 await player.SkipAsync();
@@ -278,9 +281,10 @@ namespace Stringdicator.Modules {
         /// </summary>
         [SlashCommand("clear", "Clear the current track queue")]
         private async Task ClearQueueAsync() {
-            if (!UserInVoice().Result) {
+            if (!UserInVoice().Result || !BotInVoice().Result) {
                 return;
             }
+            await DeferAsync();
 
             var player = _lavaNode.GetPlayer(Context.Guild);
 
@@ -293,9 +297,10 @@ namespace Stringdicator.Modules {
         /// </summary>
         [SlashCommand("pause", "Pause the currently playing track")]
         private async Task PauseAsync() {
-            if (!UserInVoice().Result) {
+            if (!UserInVoice().Result || !BotInVoice().Result) {
                 return;
             }
+            await DeferAsync();
             
             var player = _lavaNode.GetPlayer(Context.Guild);
             await player.PauseAsync();
@@ -308,7 +313,7 @@ namespace Stringdicator.Modules {
         /// </summary>
         [SlashCommand("resume", "Resume the currently playing track")]
         private async Task ResumeAsync() {
-            if (!UserInVoice().Result) {
+            if (!UserInVoice().Result || !BotInVoice().Result) {
                 return;
             }
 
@@ -316,6 +321,8 @@ namespace Stringdicator.Modules {
                 await RespondAsync("Already Playing", ephemeral: true);
                 return;
             }
+            
+            await DeferAsync();
 
             var player = _lavaNode.GetPlayer(Context.Guild);
             await player.ResumeAsync();
@@ -328,9 +335,10 @@ namespace Stringdicator.Modules {
         /// </summary>
         [SlashCommand("nowplaying", "Show the currently playing track")]
         private async Task CurrentTrackAsync() {
-            if (!UserInVoice().Result) {
+            if (!UserInVoice().Result || !BotInVoice().Result) {
                 return;
             }
+            await DeferAsync();
 
 
             var player = _lavaNode.GetPlayer(Context.Guild);
@@ -349,22 +357,28 @@ namespace Stringdicator.Modules {
         /// Display the current queue of tracks
         /// </summary>
         [SlashCommand("queue", "Display the current track queue with an optional page number")]
-        private async Task QueueAsync(int offset = 1) {
-            if (!UserInVoice().Result) {
+        private async Task QueueAsync(int page = 1) {
+            if (!UserInVoice().Result || !BotInVoice().Result) {
                 return;
             }
 
-
             var player = _lavaNode.GetPlayer(Context.Guild);
+            
+            if (player.Queue.Count == 0) {
+                await CurrentTrackAsync();
+                return;
+            }
+            
+            await DeferAsync();
 
-            if ((player.PlayerState == PlayerState.Stopped || player.PlayerState == PlayerState.None) &&
+            if (player.PlayerState is PlayerState.Stopped or PlayerState.None &&
                 player.Queue.Count == 0) {
                 await EmbedText("Queue is empty", false);
                 return;
             }
 
-            offset = (offset - 1) * 5;
-            if (offset > player.Queue.Count) {
+            page = (page - 1) * 5;
+            if (page > player.Queue.Count) {
                 return;
             }
 
@@ -375,13 +389,8 @@ namespace Stringdicator.Modules {
             builder.WithColor(3447003);
             builder.WithDescription("");
 
-            if (player.Queue.Count == 0) {
-                await CurrentTrackAsync();
-                return;
-            }
 
-
-            if (offset == 0) {
+            if (page == 0) {
                 //Now playing
                 builder.AddField(new EmbedFieldBuilder {
                     Name = "Now Playing: ",
@@ -410,7 +419,7 @@ namespace Stringdicator.Modules {
                     builder.AddField(fieldBuilder);
                 }
             } else {
-                for (var i = offset; i < offset + 5 && i < player.Queue.Count; i++) {
+                for (var i = page; i < page + 5 && i < player.Queue.Count; i++) {
                     var lavaTrack = player.Queue.ElementAt(i);
                     var fieldBuilder = new EmbedFieldBuilder {
                         Name = $"Queue position {i + 1}",
@@ -421,7 +430,7 @@ namespace Stringdicator.Modules {
                 }
             }
 
-            await RespondAsync(embed: builder.Build());
+            await FollowupAsync(embed: builder.Build());
         }
 
         /// <summary>
@@ -429,10 +438,11 @@ namespace Stringdicator.Modules {
         /// </summary>
         [SlashCommand("shuffle", "Shuffle the current queue")]
         private async Task ShuffleQueue() {
-            if (!UserInVoice().Result) {
+            if (!UserInVoice().Result || !BotInVoice().Result) {
                 return;
             }
-            
+            await DeferAsync();
+
             var player = _lavaNode.GetPlayer(Context.Guild);
             player.Queue.Shuffle();
             await EmbedText("Queue Shuffled", false);
@@ -457,7 +467,7 @@ namespace Stringdicator.Modules {
                 builder.WithAuthor(new EmbedAuthorBuilder
                     { IconUrl = Context.User.GetAvatarUrl(), Name = "Added to queue" });
             builder.WithColor(3447003);
-            await RespondAsync(embed: builder.Build());
+            await FollowupAsync(embed: builder.Build());
         }
 
         /// <summary>
@@ -466,8 +476,24 @@ namespace Stringdicator.Modules {
         /// <returns>A Task with result true if the user is in a channel</returns>
         private async Task<bool> UserInVoice() {
             var voiceState = Context.User as IVoiceState;
-            if (voiceState?.VoiceChannel != null || _lavaNode.HasPlayer(Context.Guild)) return true;
+            
+            // Check if the player that the user is in has gotten stuck and skip if so.
+            if (_lavaNode.HasPlayer(Context.Guild) && voiceState?.VoiceChannel != null) {
+                var player = _lavaNode.GetPlayer(Context.Guild);
+                if (player.Track is null && player.PlayerState != PlayerState.None) await player.SkipAsync();
+            }
+            if (voiceState?.VoiceChannel != null) return true;
             await RespondAsync("You are not in a voice channel", ephemeral: true);
+            return false;
+        }
+
+        /// <summary>
+        /// Check if the bot is in a voice channel, responding ephemerally if it is not.
+        /// </summary>
+        /// <returns>True if the bot is currently in a voice channel, false otherwise.</returns>
+        private async Task<bool> BotInVoice() {
+            if (_lavaNode.HasPlayer(Context.Guild)) return true;
+            await RespondAsync("The bot is not in a voice channel", ephemeral: true);
             return false;
         }
 
