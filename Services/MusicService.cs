@@ -34,8 +34,16 @@ namespace Stringdicator.Services {
         /// </summary>
         /// <param name="args">The information about the track that has ended</param>
         private async Task OnTrackEnded(TrackEndedEventArgs args) {
+            if (args.Reason == TrackEndReason.LoadFailed) {
+                await args.Player.TextChannel.SendMessageAsync("The track failed to load, skipping");
+                await args.Player.SkipAsync();
+            }
             if (args.Reason != TrackEndReason.Finished) {
                 return;
+            }
+
+            if (args.Player.Track is null) {
+                await args.Player.SkipAsync();
             }
 
             //If queue is empty, return
@@ -85,6 +93,10 @@ namespace Stringdicator.Services {
         /// <param name="args">The information about the track that has ended</param>
         private static async Task OnTrackException(TrackExceptionEventArgs args) {
             var test = new List<LavaTrack>();
+            if (args.Exception.Message.Contains("This video is not available") || args.Player.Track is null) {
+                await args.Player.SkipAsync();
+                return;
+            }
             test.AddRange(args.Player.Queue.RemoveRange(0, args.Player.Queue.Count));
             args.Player.Queue.Clear();
             try {
