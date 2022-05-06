@@ -42,7 +42,9 @@ namespace Stringdicator.Modules {
             builder.WithImageUrl(item.Link);
             builder.WithColor(3447003);
 
-            var buttons = new ComponentBuilder().WithButton(customId: "string-reroll", label: "Search Again");
+            var buttons = new ComponentBuilder()
+                .WithButton(customId: "string-reroll", label: "Search Again")
+                .WithButton(customId: "string-delete", label: "Delete");       
             
             //Send message
             await FollowupAsync(embed: builder.Build(), components: buttons.Build());
@@ -68,7 +70,9 @@ namespace Stringdicator.Modules {
             builder.WithImageUrl(item.Link);
             builder.WithColor(3447003);
 
-            var buttons = new ComponentBuilder().WithButton(customId: "string-reroll", label: "Search Again");
+            var buttons = new ComponentBuilder()
+                .WithButton(customId: "string-reroll", label: "Search Again")
+                .WithButton(customId: "string-delete", label: "Delete");
 
             //Send message
             await FollowupAsync(embed: builder.Build(), components: buttons.Build());
@@ -167,6 +171,22 @@ namespace Stringdicator.Modules {
             await ((SocketMessageComponent)Context.Interaction).ModifyOriginalResponseAsync(x => {
                 x.Embed = builder.Build();
             });
+        }
+
+        
+        /// <summary>
+        /// Delete the Image Search if the searcher clicks the delete button
+        /// </summary>
+        [ComponentInteraction("string-delete")]
+        public async Task Delete() {
+            var clicker = Context.Interaction.User;
+            var searcher = ((SocketMessageComponent)Context.Interaction).Message.Interaction.User;
+            if (clicker.Id != searcher.Id) {
+                await RespondAsync("Only the searcher can delete this image search", ephemeral: true);
+                return;
+            }
+
+            await ((SocketMessageComponent)Context.Interaction).Message.DeleteAsync();
         }
     }
 }
