@@ -46,7 +46,7 @@ namespace Stringdicator {
             try {
                 image = await HttpClient.GetByteArrayAsync(new Uri(attachmentUrl));
             } catch (HttpRequestException exception) {
-                Console.WriteLine("Error: " + exception.Message);
+                Console.WriteLine("Image Classification was not successful. " + exception.Message);
                 return;
             }
 
@@ -60,7 +60,7 @@ namespace Stringdicator {
                     bitmap.Save(stream, System.Drawing.Imaging.ImageFormat.Png);
                     image = stream.ToArray();
                 } catch (Exception exception) {
-                    Console.WriteLine("Error: " + exception.Message);
+                    Console.WriteLine("Image Classification was not successful. " + exception.Message);
                     return;
                 }
             }
@@ -75,7 +75,7 @@ namespace Stringdicator {
         /// <param name="image">The image to be sent in bytes</param>
         /// <param name="channel">The channel of the message, used for replying to the user</param>
         /// <param name="author">The author of the original message</param>
-        private static async Task MakePredictionRequest(byte[] image, ISocketMessageChannel channel, IMentionable author) {
+        private static async Task MakePredictionRequest(byte[] image, ISocketMessageChannel channel, IUser author) {
             //Prediction endpoint
             const string url =
                 "https://string3-prediction.cognitiveservices.azure.com/customvision/v3.0/Prediction/fc50bffa-e84d-4043-b691-58c1e27a35d7/classify/iterations/NoAnime5/image";
@@ -87,6 +87,7 @@ namespace Stringdicator {
             var response = await HttpClient.PostAsync(url, content);
 
             if (!response.IsSuccessStatusCode) {
+                Console.WriteLine($"Image Classification request was not successful. Error code {response.StatusCode}.");
                 return;
             }
 
@@ -94,15 +95,16 @@ namespace Stringdicator {
             var result = JObject.Parse(await response.Content.ReadAsStringAsync());
 
             //Get the top prediction
-            var prediction = result["predictions"].FirstOrDefault();
+            var prediction = result["predictions"]?.FirstOrDefault();
             if (prediction == null) {
+                Console.WriteLine("Image Classification request was not successful. Bad response.");
                 return;
             }
 
             var predictionName = prediction["tagName"].ToString();
             var predictionProbability = prediction["probability"].ToString();
 
-            Console.WriteLine($"{predictionName} {predictionProbability}");
+            Console.WriteLine($"Image from {author.Username}#{author.DiscriminatorValue} - {predictionName} - {predictionProbability}");
 
             //Message response
             if (predictionName.Equals("Anime") && Convert.ToDouble(predictionProbability) > 0.8) {
