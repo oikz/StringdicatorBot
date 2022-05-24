@@ -90,7 +90,7 @@ namespace Stringdicator {
                 return;
             }
 
-            if (message.Content.StartsWith("https://tenor.com")) {
+            if (message.Content.StartsWith("https://tenor.com") || message.Content.StartsWith("https://media.discordapp.net")) {
                 if (!message.Content.StartsWith("https://tenor.com/view")) {
                     var check = await _httpClient.GetAsync(new Uri(message.Content));
                     ImagePrediction.MakePrediction(check.RequestMessage?.RequestUri + ".gif", context.Channel, context.User);
@@ -135,10 +135,10 @@ namespace Stringdicator {
 
             var message = cachedMessage.Value;
             Console.WriteLine(
-                $"Message from {message.Author} was removed from the channel {channel.Value.Name}: \n"
+                $"Message from {message.Author.Username}#{message.Author.DiscriminatorValue} was removed from the channel {channel.Value.Name}: \n"
                 + message.Content);
             _logFile.WriteLine(
-                $"{DateTime.Now}: Message from {message.Author} was removed from the channel {channel.Value.Name}: \n"
+                $"{DateTime.Now}: Message from {message.Author.Username}#{message.Author.DiscriminatorValue} was removed from the channel {channel.Value.Name}: \n"
                 + message.Content);
 
             return Task.CompletedTask;
@@ -165,10 +165,15 @@ namespace Stringdicator {
                 return;
             }
 
+            // Ignore messages if they are the same thing
+            if (message.Content.Equals(newMessage.Content)) {
+                return;
+            }
+
             Console.WriteLine(
-                $"Message from {message.Author} in {channel.Name} was edited from {message} -> {newMessage}");
+                $"Message from {message.Author.Username}#{message.Author.DiscriminatorValue} in {channel.Name} was edited from {message} -> {newMessage}");
             await _logFile.WriteLineAsync(
-                $"{DateTime.Now}: Message from {message.Author} in {channel.Name} was edited from {message} -> {newMessage}");
+                $"{DateTime.Now}: Message from {message.Author.Username}#{message.Author.DiscriminatorValue} in {channel.Name} was edited from {message} -> {newMessage}");
         }
 
         /**
