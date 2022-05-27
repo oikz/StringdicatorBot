@@ -23,7 +23,8 @@ namespace Stringdicator {
             _discordClient = new DiscordSocketClient(new DiscordSocketConfig {
                 LogLevel = LogSeverity.Info,
                 MessageCacheSize = 250,
-                AlwaysDownloadUsers = true
+                AlwaysDownloadUsers = true,
+                GatewayIntents = GatewayIntents.AllUnprivileged | GatewayIntents.GuildMembers
             });
             
             _interactions = new InteractionService(_discordClient, new InteractionServiceConfig() {

@@ -49,7 +49,20 @@ namespace Stringdicator.Modules {
             var userList = users.ToList();
             userList.Sort((pair1, pair2) => pair2.Value.CompareTo(pair1.Value));
             var line = "";
-            foreach (var (key, value) in userList) {
+            
+            // Get all of the users in a given channel and get their violations from the file if applicable
+            // Special case for threads as these are handled differently and generally would return the members of the
+            // parent channel instead of the thread.
+            IEnumerable<IUser> usersInChannel;
+            if (Context.Channel is SocketThreadChannel threadChannel) {
+                usersInChannel = await threadChannel.GetUsersAsync();
+            } else {
+                usersInChannel = await Context.Channel.GetUsersAsync().FlattenAsync();
+            }
+
+            var violations = userList.Where(user => usersInChannel.Any(a => a.Id.Equals(user.Key)));
+            
+            foreach (var (key, value) in violations) {
                 if (Context.Guild.GetUser(key) == null) continue;
                 line += $"{Context.Guild.GetUser(key).Username}";
                 line += $" - {value}\n";
