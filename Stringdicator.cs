@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Discord;
 using Discord.Interactions;
 using Discord.WebSocket;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Stringdicator.Database;
 using Stringdicator.Services;
@@ -75,8 +76,9 @@ namespace Stringdicator {
             await _discordClient.StartAsync();
 
             ImagePrediction.HttpClient = services.GetRequiredService<HttpClient>();
+            ImagePrediction.ApplicationContext = services.GetRequiredService<ApplicationContext>();
 
-            await services.GetRequiredService<ApplicationContext>().Database.EnsureCreatedAsync();
+            await services.GetRequiredService<ApplicationContext>().Database.MigrateAsync();
 
             var handler = new CommandHandler(_discordClient, _interactions, services, _httpClient);
             await handler.InstallCommandsAsync();

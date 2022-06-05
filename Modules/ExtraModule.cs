@@ -42,14 +42,14 @@ namespace Stringdicator.Modules {
             } else {
                 usersInChannel = await Context.Channel.GetUsersAsync().FlattenAsync();
             }
-            
+
             var userIds = usersInChannel.Select(x => x.Id);
             var users = _applicationContext.Users.Where(x => userIds.Contains(x.Id)).ToList();
-            
+
             users.Sort((user1, user2) => user2.Violations.CompareTo(user1.Violations));
             var line = "";
 
-            foreach (var user in users) {
+            foreach (var user in users.Where(user => user.Violations != 0)) {
                 line += $"{Context.Guild.GetUser(user.Id).Username}";
                 line += $" - {user.Violations}\n";
             }
@@ -58,7 +58,7 @@ namespace Stringdicator.Modules {
             if (line.Equals("")) {
                 builder.Title = "No Violations Recorded.";
             }
-            
+
             //Send message
             await FollowupAsync(embed: builder.Build());
         }
@@ -77,7 +77,7 @@ namespace Stringdicator.Modules {
             await FollowupAsync(embed: builder.Build());
         }
 
-        
+
         /// <summary>
         /// Create an Embed for the No Anime Violation based on the given user
         /// Will search Google for a relevant Image and construct the message to send back to the server
@@ -125,6 +125,72 @@ namespace Stringdicator.Modules {
             builder.WithThumbnailUrl(item.Link);
 
             return builder;
+        }
+
+
+        /// <summary>
+        /// Display the number of Gorilla moments that each member has had.
+        /// </summary>
+        [SlashCommand("gorillamoments", "Shows number of times Gorilla moments for each member of this server")]
+        public async Task GorillaMoments() {
+            await DeferAsync();
+
+            var builder = new EmbedBuilder();
+            builder.WithTitle("Gorilla Moments: ");
+            builder.WithColor(3447003);
+            builder.WithDescription("");
+
+            // Get all of the users in a given channel and get their violations from the file if applicable
+            // Special case for threads as these are handled differently and generally would return the members of the
+            // parent channel instead of the thread.
+            IEnumerable<IUser> usersInChannel;
+            if (Context.Channel is SocketThreadChannel threadChannel) {
+                usersInChannel = await threadChannel.GetUsersAsync();
+            } else {
+                usersInChannel = await Context.Channel.GetUsersAsync().FlattenAsync();
+            }
+
+            var userIds = usersInChannel.Select(x => x.Id);
+            var users = _applicationContext.Users.Where(x => userIds.Contains(x.Id)).ToList();
+
+            users.Sort((user1, user2) => user2.GorillaMoments.CompareTo(user1.GorillaMoments));
+            var line = "";
+
+            foreach (var user in users.Where(user => user.GorillaMoments != 0)) {
+                line += $"{Context.Guild.GetUser(user.Id).Username}";
+                line += $" - {user.GorillaMoments}\n";
+            }
+
+            builder.WithDescription(line);
+            if (line.Equals("")) {
+                builder.Title = "No Gorilla Moments Recorded.";
+            }
+
+            //Send message
+            await FollowupAsync(embed: builder.Build());
+        }
+
+        /// <summary>
+        /// Add or remove one gorilla to a User's total count of gorilla moments
+        /// </summary>
+        /// <param name="userId">The user id of the user to be gorilla momented</param>
+        /// <param name="add">Whether to add or subtract a gorilla moment from this user</param>
+        public static async Task UpdateGorilla(ulong userId, bool add) {
+            var dbUser = await _applicationContext.Users.FindAsync(userId);
+            if (dbUser is null) {
+                var newValue = add ? 1 : 0;
+                dbUser = new User {
+                    Id = userId,
+                    GorillaMoments = newValue
+                };
+                _applicationContext.Users.Add(dbUser);
+            } else {
+                dbUser.GorillaMoments += add ? 1 : -1;
+                if (dbUser.GorillaMoments < 0) dbUser.GorillaMoments = 0;
+                _applicationContext.Users.Update(dbUser);
+            }
+            
+            await _applicationContext.SaveChangesAsync();
         }
     }
 }
