@@ -6,6 +6,7 @@ using Discord;
 using Discord.Interactions;
 using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
+using Stringdicator.Database;
 using Stringdicator.Services;
 using Victoria;
 
@@ -60,6 +61,7 @@ namespace Stringdicator {
                 .AddSingleton<CommandHandler>()
                 .AddSingleton<MusicService>()
                 .AddLavaNode(x => { x.SelfDeaf = false; })
+                .AddSingleton<ApplicationContext>()
                 .BuildServiceProvider();
 
             //Login
@@ -67,6 +69,8 @@ namespace Stringdicator {
             await _discordClient.StartAsync();
 
             ImagePrediction.HttpClient = services.GetRequiredService<HttpClient>();
+
+            await services.GetRequiredService<ApplicationContext>().Database.EnsureCreatedAsync();
 
             var handler = new CommandHandler(_discordClient, _interactions, services, _httpClient);
             await handler.InstallCommandsAsync();

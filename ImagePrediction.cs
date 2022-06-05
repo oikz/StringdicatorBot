@@ -5,15 +5,15 @@ using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
-using System.Xml;
-using System.Xml.Linq;
 using Discord;
 using Discord.WebSocket;
 using Newtonsoft.Json.Linq;
+using Stringdicator.Database;
 
 namespace Stringdicator {
     public static class ImagePrediction {
         public static HttpClient HttpClient { get; set; }
+        public static ApplicationContext ApplicationContext { get; set; }
 
         /// <summary>
         /// Handles setup for the image classification prediction
@@ -78,7 +78,7 @@ namespace Stringdicator {
         private static async Task MakePredictionRequest(byte[] image, ISocketMessageChannel channel, IUser author) {
             //Prediction endpoint
             const string url =
-                "https://string3-prediction.cognitiveservices.azure.com/customvision/v3.0/Prediction/fc50bffa-e84d-4043-b691-58c1e27a35d7/classify/iterations/NoAnime5/image";
+                "https://string3-prediction.cognitiveservices.azure.com/customvision/v3.0/Prediction/fc50bffa-e84d-4043-b691-58c1e27a35d7/classify/iterations/NoAnime6/image";
 
             // Sends the image as a byte array to the endpoint to run a prediction on it
             using var content = new ByteArrayContent(image);
@@ -121,24 +121,8 @@ namespace Stringdicator {
         /// <param name="channel">The channel the message was sent in</param>
         /// <returns>True if in the blacklist, false otherwise</returns>
         private static async Task<bool> ChannelInImageBlacklist(ISocketMessageChannel channel) {
-            //Create new empty Blacklist file
-            if (!File.Exists("BlacklistImages.xml")) {
-                var settings = new XmlWriterSettings { Async = true };
-                var writer = XmlWriter.Create("BlacklistImages.xml", settings);
-                await writer.WriteElementStringAsync(null, "Channels", null, null);
-                writer.Close();
-                return false;
-            }
-
-            //Load the xml file containing all the channels
-            var root = XElement.Load("BlacklistImages.xml");
-
-            //If the xml file contains this channel - is blacklisted, don't react to messages
-            var address =
-                from element in root.Elements("Channel")
-                where element.Value == channel.Id.ToString()
-                select element;
-            return address.Any();
+            var channelObject = await ApplicationContext.Channels.FindAsync(channel.Id);
+            return channelObject is not null && channelObject.ImageBlacklisted;
         }
     }
 }

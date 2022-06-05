@@ -1,16 +1,14 @@
 ﻿using System;
 using System.IO;
-using System.Linq;
 using System.Net.Http;
 using System.Reflection;
 using System.Threading.Tasks;
-using System.Xml;
-using System.Xml.Linq;
 using Discord;
 using Discord.Commands;
 using Discord.Interactions;
 using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
+using Stringdicator.Database;
 using Stringdicator.Modules;
 using Victoria;
 
@@ -26,6 +24,7 @@ namespace Stringdicator {
         private readonly IServiceProvider _services;
         private readonly LavaNode _lavaNode;
         private readonly HttpClient _httpClient;
+        private readonly ApplicationContext _applicationContext;
 
 
         /// <summary>
@@ -42,6 +41,7 @@ namespace Stringdicator {
             _interactions = interactions;
             _lavaNode = _services.GetRequiredService<LavaNode>();
             _httpClient = httpClient;
+            _applicationContext = _services.GetRequiredService<ApplicationContext>();
         }
 
         /// <summary>
@@ -252,31 +252,9 @@ namespace Stringdicator {
             if ((interaction as SocketSlashCommand)?.CommandName == "blacklist") {
                 return false;
             }
-            
-            //Create new empty Blacklist file
-            if (!File.Exists("Blacklist.xml")) {
-                var settings = new XmlWriterSettings { Async = true };
-                var writer = XmlWriter.Create("Blacklist.xml", settings);
-                await writer.WriteElementStringAsync(null, "Channels", null, null);
-                writer.Close();
 
-                //Create new empty BlacklistImages file
-                if (File.Exists("BlacklistImages.xml")) return false;
-                writer = XmlWriter.Create("BlacklistImages.xml", settings);
-                await writer.WriteElementStringAsync(null, "Channels", null, null);
-                writer.Close();
-                return false;
-            }
-
-            //Load the xml file containing all the channels
-            var root = XElement.Load("Blacklist.xml");
-
-            //If the xml file contains this channel - is blacklisted, don't react to messages
-            var address =
-                from element in root.Elements("Channel")
-                where element.Value == interaction.Channel.Id.ToString()
-                select element;
-            return address.Any();
+            var channelObject = await _applicationContext.Channels.FindAsync(interaction.Channel.Id);
+            return channelObject is not null && channelObject.Blacklisted;
         }
     }
 }

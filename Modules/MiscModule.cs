@@ -1,49 +1,55 @@
-﻿using System.IO;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Xml.Linq;
+﻿using System.Threading.Tasks;
 using Discord;
 using Discord.Interactions;
+using Stringdicator.Database;
 
 namespace Stringdicator.Modules {
     /// <summary>
     /// Module for miscellaneous commands that users can use
     /// </summary>
-    [Discord.Commands.Summary("Miscellaneous Commands")]
+    [Discord.Commands.Summary("Miscellaneous Server Commands")]
     public class MiscModule : InteractionModuleBase<SocketInteractionContext> {
+        
+        private static ApplicationContext _applicationContext;
+
+        /// <summary>
+        /// Constructor for MiscModule to be able to access the database using a Database Context
+        /// </summary>
+        /// <param name="applicationContext">The Database Context</param>
+        public MiscModule(ApplicationContext applicationContext) {
+            _applicationContext = applicationContext;
+        }
+        
         /// <summary>
         /// Blacklist a channel from being accessible to commands
         /// Using the command again un-blacklists the channel
         /// </summary>
         [SlashCommand("blacklist", "Blacklist this channel from receiving commands")]
         private async Task BlacklistChannelAsync() {
-            var stream = File.Open("Blacklist.xml", FileMode.Open);
-            var document = await XDocument.LoadAsync(stream, LoadOptions.None, CancellationToken.None);
-            var channels = document.Element("Channels");
-            
-            //Check for this channel already being in the file
-            var thisChannel =
-                channels?.Nodes().FirstOrDefault(node => ((XElement) node).Value.Equals(Context.Channel.Id.ToString()));
+            await DeferAsync();
             
             var builder = new EmbedBuilder();
             builder.WithDescription("");
             builder.WithColor(3447003);
-            //If this channel is already blacklisted, un-blacklist it
-            if (thisChannel != null) {
-                builder.WithTitle("Channel Unblacklisted");
-                thisChannel.Remove();
-            } else {
-                //Blacklist this channel
+            
+            var channel = await _applicationContext.Channels.FindAsync(Context.Channel.Id);
+            if (channel is null) {
+                _applicationContext.Channels.Add(new Channel {
+                    Id = Context.Channel.Id,
+                    Blacklisted = true
+                });
                 builder.WithTitle("Channel Blacklisted");
-                channels?.Add(new XElement("Channel", Context.Channel.Id));
+            } else if (channel.Blacklisted) {
+                channel.Blacklisted = false;
+                builder.WithTitle("Channel Unblacklisted");
+            } else {
+                channel.Blacklisted = true;
+                builder.WithTitle("Channel Blacklisted");
             }
-
-            await RespondAsync(embed: builder.Build());
-
-            //Cleanup and save
-            stream.Close();
-            document.Save("Blacklist.xml");
+            
+            await _applicationContext.SaveChangesAsync();
+            
+            await FollowupAsync(embed: builder.Build());
         }
         
         
@@ -53,32 +59,30 @@ namespace Stringdicator.Modules {
         /// </summary>
         [SlashCommand("blacklistimages", "Blacklist this channel from reacting to images")]
         private async Task BlacklistChannelImageAsync() {
-            var stream = File.Open("BlacklistImages.xml", FileMode.Open);
-            var document = await XDocument.LoadAsync(stream, LoadOptions.None, CancellationToken.None);
-            var channels = document.Element("Channels");
-            
-            //Check for this channel already being in the file
-            var thisChannel =
-                channels?.Nodes().FirstOrDefault(node => ((XElement) node).Value.Equals(Context.Channel.Id.ToString()));
+            await DeferAsync();
             
             var builder = new EmbedBuilder();
             builder.WithDescription("");
             builder.WithColor(3447003);
-            //If this channel is already blacklisted, un-blacklist it
-            if (thisChannel != null) {
-                builder.WithTitle("Images Unblacklisted");
-                thisChannel.Remove();
+            
+            var channel = await _applicationContext.Channels.FindAsync(Context.Channel.Id);
+            if (channel is null) {
+                _applicationContext.Channels.Add(new Channel {
+                    Id = Context.Channel.Id,
+                    ImageBlacklisted = true
+                });
+                builder.WithTitle("Channel Images Blacklisted");
+            } else if (channel.ImageBlacklisted) {
+                channel.ImageBlacklisted = false;
+                builder.WithTitle("Channel Images Unblacklisted");
             } else {
-                //Blacklist this channel
-                builder.WithTitle("Images Blacklisted");
-                channels?.Add(new XElement("Channel", Context.Channel.Id));
+                channel.ImageBlacklisted = true;
+                builder.WithTitle("Channel Images Blacklisted");
             }
 
-            await RespondAsync(embed: builder.Build());
+            await _applicationContext.SaveChangesAsync();
 
-            //Cleanup and save
-            stream.Close();
-            document.Save("BlacklistImages.xml");
+            await FollowupAsync(embed: builder.Build());
         }
     }
 }
