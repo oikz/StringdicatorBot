@@ -50,6 +50,12 @@ namespace Stringdicator {
             //Load Token from env file
             var root = Directory.GetCurrentDirectory();
             var dotenv = Path.Combine(root, ".env");
+            
+            if (!File.Exists(dotenv)) {
+                Console.WriteLine("No .env file found");
+                return;
+            }
+            
             DotEnv.Load(dotenv);
 
 

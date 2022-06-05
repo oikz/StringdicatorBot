@@ -12,10 +12,6 @@ namespace Stringdicator {
         /// </summary>
         /// <param name="filePath">The path of the file to be read</param>
         public static void Load(string filePath) {
-            if (!File.Exists(filePath)) {
-                return;
-            }
-
             //Read each line and save them as environment variables
             foreach (var line in File.ReadAllLines(filePath)) {
                 var parts = line.Split(
