@@ -50,14 +50,14 @@ namespace Stringdicator {
         private async Task MainAsync() {
             //Load Token from env file
             var root = Directory.GetCurrentDirectory();
-            var dotenv = Path.Combine(root, ".env");
+            var configFile = Path.Combine(root, ".env");
             
-            if (!File.Exists(dotenv)) {
+            if (!File.Exists(configFile)) {
                 Console.WriteLine("No .env file found");
                 return;
             }
             
-            DotEnv.Load(dotenv);
+            LoadEnvironmentVariables(configFile);
 
 
             //Create the ServiceProvider for dependency injection
@@ -85,6 +85,22 @@ namespace Stringdicator {
 
             // Block this task until the program is closed.
             await Task.Delay(-1);
+        }
+
+        /// <summary>
+        /// Load values from the file and set them as Environment Variables
+        /// </summary>
+        /// <param name="filePath">The path of the file to be read</param>
+        private static void LoadEnvironmentVariables(string filePath) {
+            foreach (var line in File.ReadAllLines(filePath)) {
+                var parts = line.Split('=', StringSplitOptions.RemoveEmptyEntries);
+
+                if (parts.Length != 2) {
+                    continue;
+                }
+
+                Environment.SetEnvironmentVariable(parts[0], parts[1]);
+            }
         }
     }
 }
