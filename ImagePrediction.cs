@@ -104,7 +104,7 @@ namespace Stringdicator {
             var predictionName = prediction["tagName"].ToString();
             var predictionProbability = prediction["probability"].ToString();
 
-            Console.WriteLine($"Image from {author.Username}#{author.DiscriminatorValue} - {predictionName} - {predictionProbability}");
+            Console.WriteLine($"{DateTime.Now}: Image from {author.Username}#{author.DiscriminatorValue} - {predictionName} - {predictionProbability}");
 
             //Message response
             if (predictionName.Equals("Anime") && Convert.ToDouble(predictionProbability) > 0.8) {

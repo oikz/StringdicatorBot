@@ -30,17 +30,13 @@ namespace Stringdicator {
         /// <summary>
         /// Constructor for the CommandHandler to initialise the values needed to run
         /// </summary>
-        /// <param name="client">This discord client object</param>
-        /// <param name="interactions">The InteractionService to be used</param>
         /// <param name="services">The ServiceProvider to be used</param>
-        /// <param name="httpClient">The HTTPClient to be used</param>
-        public CommandHandler(DiscordSocketClient client, InteractionService interactions, IServiceProvider services,
-            HttpClient httpClient) {
-            _discordClient = client;
+        public CommandHandler(IServiceProvider services) {
             _services = services;
-            _interactions = interactions;
+            _discordClient = _services.GetRequiredService<DiscordSocketClient>();
+            _interactions = _services.GetRequiredService<InteractionService>();
             _lavaNode = _services.GetRequiredService<LavaNode>();
-            _httpClient = httpClient;
+            _httpClient = _services.GetRequiredService<HttpClient>();
             _applicationContext = _services.GetRequiredService<ApplicationContext>();
         }
 
@@ -71,7 +67,7 @@ namespace Stringdicator {
         /// <param name="messageParam">The message that was received</param>
         private async Task HandleCommandAsync(SocketMessage messageParam) {
             // Don't process the command if it was a system message
-            if (!(messageParam is SocketUserMessage message)) return;
+            if (messageParam is not SocketUserMessage message) return;
             // Ignore messages from other bots
             if (message.Author.IsBot || message.Author.Id.Equals(_discordClient.CurrentUser.Id)) return;
 
@@ -87,7 +83,6 @@ namespace Stringdicator {
                 }
 
                 ImagePrediction.MakePrediction(attachment.Url, context.Channel, context.User);
-                GC.Collect(); //To fix file in use errors
                 return;
             }
 
@@ -95,12 +90,10 @@ namespace Stringdicator {
                 if (!message.Content.StartsWith("https://tenor.com/view")) {
                     var check = await _httpClient.GetAsync(new Uri(message.Content));
                     ImagePrediction.MakePrediction(check.RequestMessage?.RequestUri + ".gif", context.Channel, context.User);
-                    GC.Collect();
                     return;
                 }
 
                 ImagePrediction.MakePrediction(message.Content + ".gif", context.Channel, context.User);
-                GC.Collect();
             }
         }
 
@@ -128,15 +121,10 @@ namespace Stringdicator {
                 return Task.CompletedTask;
             }
 
-            // Ignore !say deleted messages
-            if (cachedMessage.Value.Content.Contains("!say")) {
-                return Task.CompletedTask;
-            }
-
 
             var message = cachedMessage.Value;
             Console.WriteLine(
-                $"Message from {message.Author.Username}#{message.Author.DiscriminatorValue} was removed from the channel {channel.Value.Name}: \n"
+                $"{DateTime.Now}: Message from {message.Author.Username}#{message.Author.DiscriminatorValue} was removed from the channel {channel.Value.Name}: \n"
                 + message.Content);
             _logFile.WriteLine(
                 $"{DateTime.Now}: Message from {message.Author.Username}#{message.Author.DiscriminatorValue} was removed from the channel {channel.Value.Name}: \n"
@@ -158,9 +146,8 @@ namespace Stringdicator {
                 return;
             }
 
-            var message = await cachedMessage.GetOrDownloadAsync();
-
-
+            var message = cachedMessage.Value;
+            
             //Don't show stuff edited by bot - Embeds etc
             if (message.Author.Username.Equals(_discordClient.CurrentUser.Username)) {
                 return;
@@ -172,7 +159,7 @@ namespace Stringdicator {
             }
 
             Console.WriteLine(
-                $"Message from {message.Author.Username}#{message.Author.DiscriminatorValue} in {channel.Name} was edited from {message} -> {newMessage}");
+                $"{DateTime.Now}: Message from {message.Author.Username}#{message.Author.DiscriminatorValue} in {channel.Name} was edited from {message} -> {newMessage}");
             await _logFile.WriteLineAsync(
                 $"{DateTime.Now}: Message from {message.Author.Username}#{message.Author.DiscriminatorValue} in {channel.Name} was edited from {message} -> {newMessage}");
         }

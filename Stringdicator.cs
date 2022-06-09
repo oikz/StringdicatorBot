@@ -80,7 +80,7 @@ namespace Stringdicator {
 
             await services.GetRequiredService<ApplicationContext>().Database.MigrateAsync();
 
-            var handler = new CommandHandler(_discordClient, _interactions, services, _httpClient);
+            var handler = new CommandHandler(services);
             await handler.InstallCommandsAsync();
 
             // Block this task until the program is closed.
