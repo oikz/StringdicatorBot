@@ -203,7 +203,7 @@ namespace Stringdicator {
             Cacheable<IMessageChannel, ulong> channel, SocketReaction reaction) {
             cachedMessage.Value.Reactions.TryGetValue(new Emoji("🦍"), out var gorillas);
             
-            if (gorillas.ReactionCount < 3 && reaction.Emote.Equals(new Emoji("🦍"))) {
+            if (gorillas.ReactionCount == 2 && reaction.Emote.Equals(new Emoji("🦍"))) {
                 var userId = cachedMessage.Value.Author.Id;
                 await ExtraModule.UpdateGorilla(userId, false);
             }
@@ -293,8 +293,6 @@ namespace Stringdicator {
         /// Check if the message has received 3 Gorilla reacts and if so, add one Gorilla Moment to the user.
         /// </summary>
         /// <param name="cachedMessage">The message</param>
-        /// <param name="channel">The channel it was sent in</param>
-        /// <param name="reaction">The reaction that was sent</param>
         private static async Task CheckGorilla(Cacheable<IUserMessage, ulong> cachedMessage) {
             cachedMessage.Value.Reactions.TryGetValue(new Emoji("🦍"), out var gorillas);
             if (gorillas.ReactionCount == 3) {
