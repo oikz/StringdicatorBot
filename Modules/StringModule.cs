@@ -50,7 +50,7 @@ namespace Stringdicator.Modules {
 
             //Send message
             await FollowupAsync(embed: builder.Build());
-            Console.WriteLine("String! - " + item.Link + " " + (startIndex + index));
+            Console.WriteLine($"{DateTime.Now}: String! - " + item.Link + " " + (startIndex + index));
         }
 
 
@@ -79,7 +79,7 @@ namespace Stringdicator.Modules {
             //Send message
             await FollowupAsync(embed: builder.Build(), components: buttons.Build());
             
-            Console.WriteLine("Stringsearch! - " + searchTerm + " " + item.Link);
+            Console.WriteLine($"{DateTime.Now}: Stringsearch! - " + searchTerm + " " + item.Link);
 
             //Do an image classification prediction for stringsearch images as well
             ImagePrediction.MakePrediction(item.Link, Context.Channel, Context.Interaction.User);
