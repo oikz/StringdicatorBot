@@ -42,12 +42,8 @@ namespace Stringdicator.Modules {
             builder.WithImageUrl(item.Link);
             builder.WithColor(3447003);
 
-            var buttons = new ComponentBuilder()
-                .WithButton(customId: "string-reroll", label: "Search Again")
-                .WithButton(customId: "string-delete", label: "Delete");       
-            
             //Send message
-            await FollowupAsync(embed: builder.Build(), components: buttons.Build());
+            await FollowupAsync(embed: builder.Build());
             Console.WriteLine("String! - " + item.Link + " " + (startIndex + index));
         }
 
@@ -71,8 +67,8 @@ namespace Stringdicator.Modules {
             builder.WithColor(3447003);
 
             var buttons = new ComponentBuilder()
-                .WithButton(customId: "string-reroll", label: "Search Again")
-                .WithButton(customId: "string-delete", label: "Delete");
+                .WithButton(customId: "search-reroll", label: "Next Image")
+                .WithButton(customId: "search-delete", label: "Delete");
 
             //Send message
             await FollowupAsync(embed: builder.Build(), components: buttons.Build());
@@ -154,7 +150,7 @@ namespace Stringdicator.Modules {
         /// <summary>
         /// A re-roll button for the stringsearch command to get a new image
         /// </summary>
-        [ComponentInteraction("string-reroll")]
+        [ComponentInteraction("search-reroll")]
         public async Task ReRoll() {
             var searchTerm = ((SocketMessageComponent)Context.Interaction).Message.Embeds.ElementAt(0).Title
                 .Replace("Stringsearch! -", "");
@@ -177,7 +173,7 @@ namespace Stringdicator.Modules {
         /// <summary>
         /// Delete the Image Search if the searcher clicks the delete button
         /// </summary>
-        [ComponentInteraction("string-delete")]
+        [ComponentInteraction("search-delete")]
         public async Task Delete() {
             var clicker = Context.Interaction.User;
             var searcher = ((SocketMessageComponent)Context.Interaction).Message.Interaction.User;
