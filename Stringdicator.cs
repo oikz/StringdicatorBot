@@ -69,6 +69,7 @@ namespace Stringdicator {
                 .AddSingleton<MusicService>()
                 .AddLavaNode(x => { x.SelfDeaf = false; })
                 .AddSingleton<ApplicationContext>()
+                .AddSingleton<ImageSearchCacheService>()
                 .BuildServiceProvider();
 
             //Login
