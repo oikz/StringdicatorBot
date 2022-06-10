@@ -120,6 +120,11 @@ namespace Stringdicator {
             if (!cachedMessage.HasValue) {
                 return Task.CompletedTask;
             }
+            
+            // Ignore deleted messages from other bots
+            if (cachedMessage.Value.Author.IsBot || cachedMessage.Value.Author.Id.Equals(_discordClient.CurrentUser.Id)) {
+                return Task.CompletedTask;
+            }
 
 
             var message = cachedMessage.Value;
@@ -148,8 +153,8 @@ namespace Stringdicator {
 
             var message = cachedMessage.Value;
             
-            //Don't show stuff edited by bot - Embeds etc
-            if (message.Author.Username.Equals(_discordClient.CurrentUser.Username)) {
+            // Ignore deleted messages from other bots
+            if (cachedMessage.Value.Author.IsBot || cachedMessage.Value.Author.Id.Equals(_discordClient.CurrentUser.Id)) {
                 return;
             }
 
