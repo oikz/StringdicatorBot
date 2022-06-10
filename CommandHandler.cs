@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Reflection;
 using System.Threading.Tasks;
@@ -193,9 +194,10 @@ namespace Stringdicator {
         /// <param name="reaction">The reaction that was removed</param>
         private async Task HandleReactionRemoved(Cacheable<IUserMessage, ulong> cachedMessage,
             Cacheable<IMessageChannel, ulong> channel, SocketReaction reaction) {
-            cachedMessage.Value.Reactions.TryGetValue(new Emoji("🦍"), out var gorillas);
             
-            if (gorillas.ReactionCount == 2 && reaction.Emote.Equals(new Emoji("🦍"))) {
+            // Don't count bots in the total.
+            var users = await cachedMessage.Value.GetReactionUsersAsync(new Emoji("🦍"), 100).FlattenAsync();
+            if (users.Count(e => !e.IsBot) == 1 && reaction.Emote.Equals(new Emoji("🦍"))) {
                 var userId = cachedMessage.Value.Author.Id;
                 await ExtraModule.UpdateGorilla(userId, false);
             }
@@ -253,9 +255,9 @@ namespace Stringdicator {
                 return;
             }
             
-            cachedMessage.Value.Reactions.TryGetValue(new Emoji("\U0001F44D"), out var thumbsUp);
-            cachedMessage.Value.Reactions.TryGetValue(new Emoji("\U0001F44E"), out var thumbsDown);
-            if (thumbsUp.ReactionCount != 3 && thumbsDown.ReactionCount != 3) {
+            var thumbsUp = await cachedMessage.Value.GetReactionUsersAsync(new Emoji("\U0001F44D"), 100).FlattenAsync();
+            var thumbsDown = await cachedMessage.Value.GetReactionUsersAsync(new Emoji("\U0001F44D"), 100).FlattenAsync();
+            if (thumbsUp.Count(e => !e.IsBot) != 3 && thumbsDown.Count(e => !e.IsBot) != 3) {
                 return;
             }
             
@@ -283,12 +285,12 @@ namespace Stringdicator {
 
         /// <summary>
         /// Check if the message has received 3 Gorilla reacts and if so, add one Gorilla Moment to the user.
+        /// Doesn't count bots in the total.
         /// </summary>
         /// <param name="cachedMessage">The message</param>
         private static async Task CheckGorilla(Cacheable<IUserMessage, ulong> cachedMessage) {
-            cachedMessage.Value.Reactions.TryGetValue(new Emoji("🦍"), out var gorillas);
-            if (gorillas.ReactionCount == 3) {
-                // Get or add user to gorillas.xml 
+            var users = await cachedMessage.Value.GetReactionUsersAsync(new Emoji("🦍"), 100).FlattenAsync();
+            if (users.Count(e => !e.IsBot) >= 2) {
                 var userId = cachedMessage.Value.Author.Id;
                 await ExtraModule.UpdateGorilla(userId, true);
             }
