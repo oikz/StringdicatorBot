@@ -34,8 +34,8 @@ public class ImageSearchCacheService {
 
         var cacheEntryOptions = new MemoryCacheEntryOptions()
             .SetSize(1)
-            .SetSlidingExpiration(TimeSpan.FromMinutes(5))
-            .SetAbsoluteExpiration(TimeSpan.FromMinutes(10));
+            .SetSlidingExpiration(TimeSpan.FromMinutes(10))
+            .SetAbsoluteExpiration(TimeSpan.FromMinutes(30));
 
         if (cacheEntry.Length != 0) _cache.Set($"Term-{searchTerm},Index-{startIndex}", cacheEntry, cacheEntryOptions);
         return cacheEntry;

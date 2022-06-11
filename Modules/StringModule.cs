@@ -60,7 +60,7 @@ namespace Stringdicator.Modules {
         /// <param name="searchTerm">The string term to be searched</param>
         [SlashCommand("search", "Finds a searched image")]
         private async Task StringSearchAsync([Summary("search-term", "The search query to find and image for")] string searchTerm) {
-            var items = await _imageCache.GetOrCreate(this, searchTerm, 0);
+            var items = await _imageCache.GetOrCreate(this, searchTerm, 1);
 
             if (items.Length == 0) return;
             var item = items[0];
@@ -92,7 +92,7 @@ namespace Stringdicator.Modules {
         /// <param name="searchTerm">The string term to be searched</param>
         [SlashCommand("spoiler", "Finds a searched image and spoilers it")]
         private async Task StringSearchSpoilerAsync([Summary("search-term", "The search query to find and image for")] string searchTerm) {
-            var items = await _imageCache.GetOrCreate(this, searchTerm, 0);
+            var items = await _imageCache.GetOrCreate(this, searchTerm, 1);
 
             if (items.Length == 0) return;
             var item = items[0];
