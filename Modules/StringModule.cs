@@ -134,8 +134,10 @@ namespace Stringdicator.Modules {
                 response = await GoogleSearch.ImageSearch.QueryAsync(request);
             } catch (Exception exception) {
                 Console.WriteLine("Error: " + exception.Message);
-                await FollowupAsync($"An error occurred searching for \"{searchTerm}\" \n" +
-                                    "Perhaps the Google Search quota has been reached?");
+                if (exception.Message.Contains("Rate Limit Exceeded")) {
+                    await Context.Channel.SendMessageAsync("Rate Limit Exceeded");
+                }
+                await FollowupAsync($"An error occurred searching for \"{searchTerm}\"");
                 return Array.Empty<Item>();
             }
 
