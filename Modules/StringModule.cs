@@ -73,7 +73,8 @@ namespace Stringdicator.Modules {
             builder.WithFooter("Image number 1 of page 1");
 
             var buttons = new ComponentBuilder()
-                .WithButton(customId: "search-reroll", label: "Next Image")
+                .WithButton(customId: "search-previous", label: "Previous")
+                .WithButton(customId: "search-next", label: "Next")
                 .WithButton(customId: "search-delete", label: "Delete");
 
             //Send message
@@ -135,7 +136,7 @@ namespace Stringdicator.Modules {
             } catch (Exception exception) {
                 Console.WriteLine("Error: " + exception.Message);
                 if (exception.Message.Contains("Rate Limit Exceeded")) {
-                    await Context.Channel.SendMessageAsync("Rate Limit Exceeded");
+                    await FollowupAsync("Error: Rate Limit Exceeded");
                 }
                 await FollowupAsync($"An error occurred searching for \"{searchTerm}\"");
                 return Array.Empty<Item>();
@@ -147,14 +148,61 @@ namespace Stringdicator.Modules {
             return Array.Empty<Item>();
         }
         
+        
         /// <summary>
         /// A re-roll button for the stringsearch command to get a new image
         /// </summary>
-        [ComponentInteraction("search-reroll")]
-        public async Task ReRoll() {
+        [ComponentInteraction("search-previous")]
+        public async Task PreviousImage() {
             var searchTerm = ((SocketMessageComponent)Context.Interaction).Message.Embeds.ElementAt(0).Title
                 .Replace("Stringsearch! - ", "");
-            if (searchTerm == "String!") searchTerm = "ball of string";
+            
+            var index = ((SocketMessageComponent)Context.Interaction).Message.Embeds.ElementAt(0).Footer?.Text
+                .Split("Image number ")[1].Split(" of page ")[0];
+            
+            var startIndex = ((SocketMessageComponent)Context.Interaction).Message.Embeds.ElementAt(0).Footer?.Text
+                .Split("Image number ")[1].Split(" of page ")[1];
+            
+            if (!int.TryParse(startIndex, out var startIndexInt)) startIndexInt = 0;
+            if (!int.TryParse(index, out var indexInt)) indexInt = 0;
+
+            if (indexInt == 1 && startIndexInt == 1) {
+                await RespondAsync("You are on the first page!", ephemeral: true);
+                return;
+            }
+
+
+            // Move to previous Image
+            if (indexInt == 1) {
+                indexInt = 11;
+                startIndexInt--;
+            }
+            indexInt--;
+            // Move to next page if reached the end of the page
+
+            var items = await _imageCache.GetOrCreate(this, searchTerm, (startIndexInt - 1) * 10 + 1);
+            
+            var item = items[indexInt - 1];
+            
+            //Create an embed using that image url
+            var builder = new EmbedBuilder();
+            builder.WithTitle(((SocketMessageComponent)Context.Interaction).Message.Embeds.ElementAt(0).Title);
+            builder.WithImageUrl(item.Link);
+            builder.WithColor(3447003);
+            builder.WithFooter($"Image number {indexInt} of page {startIndexInt}");
+            
+            await ((SocketMessageComponent)Context.Interaction).ModifyOriginalResponseAsync(x => {
+                x.Embed = builder.Build();
+            });
+        }
+        
+        /// <summary>
+        /// A re-roll button for the stringsearch command to get a new image
+        /// </summary>
+        [ComponentInteraction("search-next")]
+        public async Task NextImage() {
+            var searchTerm = ((SocketMessageComponent)Context.Interaction).Message.Embeds.ElementAt(0).Title
+                .Replace("Stringsearch! - ", "");
             
             var index = ((SocketMessageComponent)Context.Interaction).Message.Embeds.ElementAt(0).Footer?.Text
                 .Split("Image number ")[1].Split(" of page ")[0];
@@ -206,7 +254,7 @@ namespace Stringdicator.Modules {
 
         /// <summary>
         /// Simple wrapper around the DeferAsync method to allow the cache to Defer responses.
-        /// Fixes a strange issue around Unknown Webhooks on the search-reroll ModifyOriginalResponseAsync when using
+        /// Fixes a strange issue around Unknown Webhooks on the search-next ModifyOriginalResponseAsync when using
         /// DeferAsync within the commands themselves. 
         /// </summary>
         public Task DeferAsync() {
