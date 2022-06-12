@@ -116,27 +116,24 @@ namespace Stringdicator {
         /// <param name="cachedMessage">The message that was deleted</param>
         /// <param name="channel">The channel it was located in</param>
         /// <returns>A Task</returns>
-        private Task HandleMessageDelete(Cacheable<IMessage, ulong> cachedMessage, Cacheable<IMessageChannel, ulong> channel) {
-            // check if the message exists in cache; if not, we cannot report what was removed
-            if (!cachedMessage.HasValue) {
-                return Task.CompletedTask;
-            }
+        private async Task HandleMessageDelete(Cacheable<IMessage, ulong> cachedMessage, Cacheable<IMessageChannel, ulong> channel) {
+            var cachedMessageValue = await cachedMessage.GetOrDownloadAsync();
+            var cachedChannelValue = await channel.GetOrDownloadAsync();
+
             
             // Ignore deleted messages from other bots
-            if (cachedMessage.Value.Author.IsBot || cachedMessage.Value.Author.Id.Equals(_discordClient.CurrentUser.Id)) {
-                return Task.CompletedTask;
+            if (cachedMessageValue.Author.IsBot || cachedMessageValue.Author.Id.Equals(_discordClient.CurrentUser.Id)) {
+                return;
             }
 
 
-            var message = cachedMessage.Value;
+            var message = cachedMessageValue;
             Console.WriteLine(
-                $"{DateTime.Now}: Message from {message.Author.Username}#{message.Author.DiscriminatorValue} was removed from the channel {channel.Value.Name}: \n"
+                $"{DateTime.Now}: Message from {message.Author.Username}#{message.Author.DiscriminatorValue} was removed from the channel {cachedChannelValue.Name}: \n"
                 + message.Content);
             _logFile.WriteLine(
-                $"{DateTime.Now}: Message from {message.Author.Username}#{message.Author.DiscriminatorValue} was removed from the channel {channel.Value.Name}: \n"
+                $"{DateTime.Now}: Message from {message.Author.Username}#{message.Author.DiscriminatorValue} was removed from the channel {cachedChannelValue.Name}: \n"
                 + message.Content);
-
-            return Task.CompletedTask;
         }
 
         /// <summary>
@@ -147,27 +144,22 @@ namespace Stringdicator {
         /// <param name="channel">The channel that the message was located in</param>
         private async Task HandleMessageUpdate(Cacheable<IMessage, ulong> cachedMessage, SocketMessage newMessage,
             ISocketMessageChannel channel) {
-            // check if the message exists in cache; if not, we cannot report what was removed
-            if (!cachedMessage.HasValue) {
-                return;
-            }
+            var cachedMessageValue = await cachedMessage.GetOrDownloadAsync();
 
-            var message = cachedMessage.Value;
-            
             // Ignore deleted messages from other bots
-            if (cachedMessage.Value.Author.IsBot || cachedMessage.Value.Author.Id.Equals(_discordClient.CurrentUser.Id)) {
+            if (cachedMessageValue.Author.IsBot || cachedMessageValue.Author.Id.Equals(_discordClient.CurrentUser.Id)) {
                 return;
             }
 
             // Ignore messages if they are the same thing
-            if (message.Content.Equals(newMessage.Content)) {
+            if (cachedMessageValue.Content.Equals(newMessage.Content)) {
                 return;
             }
 
             Console.WriteLine(
-                $"{DateTime.Now}: Message from {message.Author.Username}#{message.Author.DiscriminatorValue} in {channel.Name} was edited from {message} -> {newMessage}");
+                $"{DateTime.Now}: Message from {cachedMessageValue.Author.Username}#{cachedMessageValue.Author.DiscriminatorValue} in {channel.Name} was edited from {cachedMessageValue} -> {newMessage}");
             await _logFile.WriteLineAsync(
-                $"{DateTime.Now}: Message from {message.Author.Username}#{message.Author.DiscriminatorValue} in {channel.Name} was edited from {message} -> {newMessage}");
+                $"{DateTime.Now}: Message from {cachedMessageValue.Author.Username}#{cachedMessageValue.Author.DiscriminatorValue} in {channel.Name} was edited from {cachedMessageValue} -> {newMessage}");
         }
 
 
@@ -179,9 +171,10 @@ namespace Stringdicator {
         /// <param name="reaction">The reaction that was sent</param>
         private async Task HandleReactionAdded(Cacheable<IUserMessage, ulong> cachedMessage,
             Cacheable<IMessageChannel, ulong> channel, SocketReaction reaction) {
-            if (cachedMessage.Value.Content.StartsWith("This looks like Anime")) {
+            var messageValue = await cachedMessage.GetOrDownloadAsync();
+            if (messageValue.Content.StartsWith("This looks like Anime")) {
                 await CheckAnimeViolation(cachedMessage, channel, reaction);
-            } else if (reaction.Emote.Equals(new Emoji("🦍"))) {
+            } else if (reaction.Emote.Equals(new Emoji("🦍")) && !reaction.User.Value.IsBot) {
                 await CheckGorilla(cachedMessage);
             }
         }
@@ -194,12 +187,16 @@ namespace Stringdicator {
         /// <param name="reaction">The reaction that was removed</param>
         private async Task HandleReactionRemoved(Cacheable<IUserMessage, ulong> cachedMessage,
             Cacheable<IMessageChannel, ulong> channel, SocketReaction reaction) {
-            
+            var messageValue = await cachedMessage.GetOrDownloadAsync();
+
+            if (reaction.User.Value.IsBot) return;
+
             // Don't count bots in the total.
-            var users = await cachedMessage.Value.GetReactionUsersAsync(new Emoji("🦍"), 100).FlattenAsync();
-            if (users.Count(e => !e.IsBot) == 1 && reaction.Emote.Equals(new Emoji("🦍"))) {
-                var userId = cachedMessage.Value.Author.Id;
-                await ExtraModule.UpdateGorilla(userId, false);
+            var users = await messageValue.GetReactionUsersAsync(new Emoji("🦍"), 100).FlattenAsync();
+
+            if (users.Count(e => !e.IsBot) == 2 && reaction.Emote.Equals(new Emoji("🦍"))) {
+                var userId = messageValue.Author.Id;
+                ExtraModule.UpdateGorilla(userId, false);
             }
         }
 
@@ -245,8 +242,14 @@ namespace Stringdicator {
         /// <param name="reaction">The reaction that was just added</param>
         private async Task CheckAnimeViolation(Cacheable<IUserMessage, ulong> cachedMessage,
             Cacheable<IMessageChannel, ulong> channel, SocketReaction reaction) {
+            var cachedMessageValue = await cachedMessage.GetOrDownloadAsync();
+            var cachedChannelValue = await channel.GetOrDownloadAsync();
+            
+            // Ignore bots
+            if (reaction.User.Value.IsBot) return;
+            
             //Only want reactions to the bot message
-            if (!cachedMessage.Value.Author.Username.Equals(_discordClient.CurrentUser.Username)) {
+            if (!cachedMessageValue.Author.Username.Equals(_discordClient.CurrentUser.Username)) {
                 return;
             }
             
@@ -254,9 +257,9 @@ namespace Stringdicator {
             if (reaction.User.Value.Username.Equals(_discordClient.CurrentUser.Username)) {
                 return;
             }
-            
-            var thumbsUp = await cachedMessage.Value.GetReactionUsersAsync(new Emoji("\U0001F44D"), 100).FlattenAsync();
-            var thumbsDown = await cachedMessage.Value.GetReactionUsersAsync(new Emoji("\U0001F44D"), 100).FlattenAsync();
+
+            var thumbsUp = await cachedMessageValue.GetReactionUsersAsync(new Emoji("\U0001F44D"), 100).FlattenAsync();
+            var thumbsDown = await cachedMessageValue.GetReactionUsersAsync(new Emoji("\U0001F44D"), 100).FlattenAsync();
             if (thumbsUp.Count(e => !e.IsBot) != 3 && thumbsDown.Count(e => !e.IsBot) != 3) {
                 return;
             }
@@ -264,12 +267,12 @@ namespace Stringdicator {
 
             //Is thumbs up react and not made by stringdicator
             if (reaction.Emote.Equals(new Emoji("\U0001F44D"))) {
-                await cachedMessage.Value.RemoveAllReactionsForEmoteAsync(new Emoji("\U0001F44D"));
+                await cachedMessageValue.RemoveAllReactionsForEmoteAsync(new Emoji("\U0001F44D"));
 
                 var context = new SocketCommandContext(_discordClient,
-                    cachedMessage.Value as SocketUserMessage
+                    cachedMessageValue as SocketUserMessage
                 );
-                var mention = cachedMessage.Value.Content.Split("- ")[1];
+                var mention = cachedMessageValue.Content.Split("- ")[1];
                 foreach (var user in context.Guild.Users) {
                     if (!user.Mention.Equals(mention)) continue;
                     var builder = await ExtraModule.NoAnime(context.Guild, user);
@@ -279,7 +282,7 @@ namespace Stringdicator {
                 
                 // Thumbs down react and not made by stringdicator    
             } else if (reaction.Emote.Equals(new Emoji("\U0001F44E"))) {
-                await channel.Value.DeleteMessageAsync(cachedMessage.Value);
+                await cachedChannelValue.DeleteMessageAsync(cachedMessageValue);
             }
         }
 
@@ -289,10 +292,12 @@ namespace Stringdicator {
         /// </summary>
         /// <param name="cachedMessage">The message</param>
         private static async Task CheckGorilla(Cacheable<IUserMessage, ulong> cachedMessage) {
-            var users = await cachedMessage.Value.GetReactionUsersAsync(new Emoji("🦍"), 100).FlattenAsync();
-            if (users.Count(e => !e.IsBot) >= 2) {
-                var userId = cachedMessage.Value.Author.Id;
-                await ExtraModule.UpdateGorilla(userId, true);
+            var cachedMessageValue = await cachedMessage.GetOrDownloadAsync();
+            
+            var users = await cachedMessageValue.GetReactionUsersAsync(new Emoji("🦍"), 100).FlattenAsync();
+            if (users.Count(e => !e.IsBot) == 3) {
+                var userId = cachedMessageValue.Author.Id;
+                ExtraModule.UpdateGorilla(userId, true);
             }
         }
     }

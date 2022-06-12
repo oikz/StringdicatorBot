@@ -101,13 +101,13 @@ namespace Stringdicator {
                 return;
             }
 
-            var predictionName = prediction["tagName"].ToString();
-            var predictionProbability = prediction["probability"].ToString();
+            var predictionName = prediction["tagName"]?.ToString();
+            var predictionProbability = prediction["probability"]?.ToString();
 
             Console.WriteLine($"{DateTime.Now}: Image from {author.Username}#{author.DiscriminatorValue} - {predictionName} - {predictionProbability}");
 
             //Message response
-            if (predictionName.Equals("Anime") && Convert.ToDouble(predictionProbability) > 0.8) {
+            if (predictionName is "Anime" && Convert.ToDouble(predictionProbability) > 0.8) {
                 var newMessage =
                     await channel.SendMessageAsync("This looks like Anime - " + author.Mention);
                 await newMessage.AddReactionAsync(new Emoji("\U0001F44D")); //Thumbs up react

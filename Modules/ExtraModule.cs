@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Discord;
 using Discord.Interactions;
@@ -69,9 +70,7 @@ namespace Stringdicator.Modules {
         /// </summary>
         /// <param name="user">The user to receive the violation</param>
         [SlashCommand("noanime", "Record a No Anime Violation for the given user")]
-        public async Task NoAnimeAsync(
-            [Summary("user", "The user to record the violation for")]
-            IUser user) {
+        public async Task NoAnimeAsync([Summary("user", "The user to record the violation for")] IUser user) {
             await DeferAsync();
             var builder = await NoAnime(Context.Guild, user);
             await FollowupAsync(embed: builder.Build());
@@ -88,7 +87,7 @@ namespace Stringdicator.Modules {
         public static async Task<EmbedBuilder> NoAnime(SocketGuild guild, IUser user) {
             var builder = new EmbedBuilder();
 
-            var unused = guild.DownloadUsersAsync();
+            await guild.DownloadUsersAsync();
 
             var request = new ImageSearchRequest {
                 Query = "No Anime",
@@ -97,8 +96,7 @@ namespace Stringdicator.Modules {
             };
 
             //Gets the search response - contains info about search
-            var response =
-                await GoogleSearch.ImageSearch.QueryAsync(request);
+            var response = await GoogleSearch.ImageSearch.QueryAsync(request);
 
             //Pick a random search result
             var items = response.Items.ToArray();
@@ -172,11 +170,13 @@ namespace Stringdicator.Modules {
 
         /// <summary>
         /// Add or remove one gorilla to a User's total count of gorilla moments
+        /// Synchronised to ensure that the database values are properly updated in the event that it gets spammed.
         /// </summary>
         /// <param name="userId">The user id of the user to be gorilla momented</param>
         /// <param name="add">Whether to add or subtract a gorilla moment from this user</param>
-        public static async Task UpdateGorilla(ulong userId, bool add) {
-            var dbUser = await _applicationContext.Users.FindAsync(userId);
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        public static void UpdateGorilla(ulong userId, bool add) {
+            var dbUser = _applicationContext.Users.Find(userId);
             if (dbUser is null) {
                 var newValue = add ? 1 : 0;
                 dbUser = new User {
@@ -190,7 +190,7 @@ namespace Stringdicator.Modules {
                 _applicationContext.Users.Update(dbUser);
             }
             
-            await _applicationContext.SaveChangesAsync();
+            _applicationContext.SaveChanges();
         }
     }
 }
