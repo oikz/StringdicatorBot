@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System;
+using Microsoft.EntityFrameworkCore;
 
 namespace Stringdicator.Database;
 
@@ -10,7 +11,7 @@ public class ApplicationContext : DbContext {
     private string DbPath { get; }
 
     public ApplicationContext() {
-        DbPath = "sqlite.db";
+        DbPath = Environment.GetEnvironmentVariable("DATABASE_URL");
     }
 
     protected override void OnConfiguring(DbContextOptionsBuilder options)

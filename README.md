@@ -10,4 +10,5 @@ ENV variables required inside executable directory .env file:
 * TOKEN - Discord bot Token
 * API_KEY - Google API Key
 * SEARCH_ENGINE_ID - Google Custom Search Engine ID
-* DEV_GUILD_ID - Guild/Server ID for Interaction command development purposes
+* DEV_GUILD_ID - Discord Guild/Server ID for Interaction command development purposes
+* DATABASE_URL - Database URL for storing persistent data
