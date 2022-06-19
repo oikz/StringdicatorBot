@@ -53,7 +53,6 @@ namespace Stringdicator {
             _discordClient.MessageDeleted += HandleMessageDelete;
             _discordClient.MessageUpdated += HandleMessageUpdate;
             _discordClient.ReactionAdded += HandleReactionAdded;
-            _discordClient.ReactionRemoved += HandleReactionRemoved;
             _discordClient.Ready += HandleReady;
             
             await _interactions.AddModulesAsync(Assembly.GetEntryAssembly(),
@@ -178,27 +177,6 @@ namespace Stringdicator {
                 await CheckGorilla(cachedMessage);
             }
         }
-        
-        /// <summary>
-        /// Handle events that should occur when a reaction is removed from a message
-        /// /// </summary>
-        /// <param name="cachedMessage">The message that the reaction was removed from</param>
-        /// <param name="channel">The channel it was sent in</param>
-        /// <param name="reaction">The reaction that was removed</param>
-        private async Task HandleReactionRemoved(Cacheable<IUserMessage, ulong> cachedMessage,
-            Cacheable<IMessageChannel, ulong> channel, SocketReaction reaction) {
-            var messageValue = await cachedMessage.GetOrDownloadAsync();
-
-            if (reaction.User.Value.IsBot) return;
-
-            // Don't count bots in the total.
-            var users = await messageValue.GetReactionUsersAsync(new Emoji("🦍"), 100).FlattenAsync();
-
-            if (users.Count(e => !e.IsBot) == 2 && reaction.Emote.Equals(new Emoji("🦍"))) {
-                var userId = messageValue.Author.Id;
-                ExtraModule.UpdateGorilla(userId, false);
-            }
-        }
 
         /// <summary>
         /// Event called when the bot is ready to receive messages
@@ -259,7 +237,7 @@ namespace Stringdicator {
             }
 
             var thumbsUp = await cachedMessageValue.GetReactionUsersAsync(new Emoji("\U0001F44D"), 100).FlattenAsync();
-            var thumbsDown = await cachedMessageValue.GetReactionUsersAsync(new Emoji("\U0001F44D"), 100).FlattenAsync();
+            var thumbsDown = await cachedMessageValue.GetReactionUsersAsync(new Emoji("\U0001F44E"), 100).FlattenAsync();
             if (thumbsUp.Count(e => !e.IsBot) != 3 && thumbsDown.Count(e => !e.IsBot) != 3) {
                 return;
             }
@@ -267,7 +245,7 @@ namespace Stringdicator {
 
             //Is thumbs up react and not made by stringdicator
             if (reaction.Emote.Equals(new Emoji("\U0001F44D"))) {
-                await cachedMessageValue.RemoveAllReactionsForEmoteAsync(new Emoji("\U0001F44D"));
+                await cachedMessageValue.DeleteAsync();
 
                 var context = new SocketCommandContext(_discordClient,
                     cachedMessageValue as SocketUserMessage
@@ -291,13 +269,18 @@ namespace Stringdicator {
         /// Doesn't count bots in the total.
         /// </summary>
         /// <param name="cachedMessage">The message</param>
-        private static async Task CheckGorilla(Cacheable<IUserMessage, ulong> cachedMessage) {
+        private async Task CheckGorilla(Cacheable<IUserMessage, ulong> cachedMessage) {
             var cachedMessageValue = await cachedMessage.GetOrDownloadAsync();
             
             var users = await cachedMessageValue.GetReactionUsersAsync(new Emoji("🦍"), 100).FlattenAsync();
-            if (users.Count(e => !e.IsBot) == 3) {
+            var usersList = users.ToList();
+            
+            // If Stringdicator has already reacted, ignore the message
+            if (usersList.Any(e => e.Username.Equals(_discordClient.CurrentUser.Username))) return;
+            
+            if (usersList.Count(e => !e.IsBot) == 3) {
                 var userId = cachedMessageValue.Author.Id;
-                ExtraModule.UpdateGorilla(userId, true);
+                ExtraModule.AddGorilla(userId, cachedMessageValue);
             }
         }
     }

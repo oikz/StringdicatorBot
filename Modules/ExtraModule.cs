@@ -173,23 +173,24 @@ namespace Stringdicator.Modules {
         /// Synchronised to ensure that the database values are properly updated in the event that it gets spammed.
         /// </summary>
         /// <param name="userId">The user id of the user to be gorilla momented</param>
-        /// <param name="add">Whether to add or subtract a gorilla moment from this user</param>
+        /// <param name="message">The message that was gorilla'd</param>
         [MethodImpl(MethodImplOptions.Synchronized)]
-        public static void UpdateGorilla(ulong userId, bool add) {
+        public static void AddGorilla(ulong userId, IUserMessage message) {
             var dbUser = _applicationContext.Users.Find(userId);
             if (dbUser is null) {
-                var newValue = add ? 1 : 0;
                 dbUser = new User {
                     Id = userId,
-                    GorillaMoments = newValue
+                    GorillaMoments = 1
                 };
                 _applicationContext.Users.Add(dbUser);
             } else {
-                dbUser.GorillaMoments += add ? 1 : -1;
+                dbUser.GorillaMoments += 1;
                 if (dbUser.GorillaMoments < 0) dbUser.GorillaMoments = 0;
                 _applicationContext.Users.Update(dbUser);
             }
-            
+
+            // Mark the message as already gorilla'd
+            message.AddReactionAsync(new Emoji("🦍"));
             _applicationContext.SaveChanges();
         }
     }
