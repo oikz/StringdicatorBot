@@ -64,7 +64,22 @@ namespace Stringdicator {
                     return;
                 }
             }
+            
+            // Check the image size is within the limits and resize if necessary
+            image = await ResizeImage(image);
+            if (image.Length > 4000000) {
+                await channel.SendMessageAsync("Image is too large to be classified.");
+                return;
+            }
 
+            // Check that the image dimensions are within accepted custom vision bounds
+            var imageStream = new MemoryStream(image);
+            var img = new Bitmap(imageStream);
+            if (img.Width < 256 || img.Height < 256 || img.Width > 10240 || img.Height > 10240) {
+                Console.WriteLine("Image is not within accepted custom vision dimensions");
+                return;
+            }
+            
             await MakePredictionRequest(image, channel, author);
         }
 
@@ -78,7 +93,7 @@ namespace Stringdicator {
         private static async Task MakePredictionRequest(byte[] image, ISocketMessageChannel channel, IUser author) {
             //Prediction endpoint
             const string url =
-                "https://string3-prediction.cognitiveservices.azure.com/customvision/v3.0/Prediction/fc50bffa-e84d-4043-b691-58c1e27a35d7/classify/iterations/NoAnime6/image";
+                "https://string3-prediction.cognitiveservices.azure.com/customvision/v3.0/Prediction/fc50bffa-e84d-4043-b691-58c1e27a35d7/classify/iterations/NoAnime7/image";
 
             // Sends the image as a byte array to the endpoint to run a prediction on it
             using var content = new ByteArrayContent(image);
@@ -123,6 +138,31 @@ namespace Stringdicator {
         private static async Task<bool> ChannelInImageBlacklist(ISocketMessageChannel channel) {
             var channelObject = await ApplicationContext.Channels.FindAsync(channel.Id);
             return channelObject is not null && channelObject.ImageBlacklisted;
+        }
+
+        /// <summary>
+        /// Check an Image's filesize in bytes and attempt to resize down to 1080p and then 720p if the file is larger
+        /// than the maximum 4MB allowed by Custom Vision.
+        /// </summary>
+        /// <param name="img">The image in bytes</param>
+        /// <returns>The same image if it is small enough or a resized image in bytes</returns>
+        private static async Task<byte[]> ResizeImage(byte[] img) {
+            if (img.Length <= 4000000) return img;
+            
+            //Resize to 1920x1080
+            var image = System.Drawing.Image.FromStream(new MemoryStream(img));
+            var bmp = new Bitmap(image, 1920, 1080);
+            await using var stream = new MemoryStream();
+            bmp.Save(stream, System.Drawing.Imaging.ImageFormat.Png);
+            img = stream.ToArray();
+            
+            if (img.Length <= 4000000) return img;
+            
+            // Resize to 1280x720
+            bmp = new Bitmap(image, 1280, 720);
+            bmp.Save(stream, System.Drawing.Imaging.ImageFormat.Png);
+            img = stream.ToArray();
+            return img;
         }
     }
 }
