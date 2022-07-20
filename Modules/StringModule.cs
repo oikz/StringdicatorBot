@@ -83,7 +83,7 @@ namespace Stringdicator.Modules {
             Console.WriteLine($"{DateTime.Now}: Stringsearch! - " + searchTerm + " " + item.Link);
 
             //Do an image classification prediction for stringsearch images as well
-            ImagePrediction.MakePrediction(item.Link, Context.Channel, Context.Interaction.User);
+            await ImagePrediction.MakePrediction(item.Link, Context.Channel, Context.Interaction.User);
         }
 
         /// <summary>
@@ -109,7 +109,7 @@ namespace Stringdicator.Modules {
             await Context.Channel.SendFileAsync(new MemoryStream(image), "SPOILER_image.png");
 
             //Do an image classification prediction for stringsearch images as well
-            ImagePrediction.MakePrediction(item.Link, Context.Channel, Context.Interaction.User);
+            await ImagePrediction.MakePrediction(item.Link, Context.Channel, Context.Interaction.User);
         }
 
         /// <summary>

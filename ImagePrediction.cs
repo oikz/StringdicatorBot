@@ -22,7 +22,7 @@ namespace Stringdicator {
         /// <param name="attachmentUrl">The url of the attachment to be sent for prediction</param>
         /// <param name="channel">The channel of the message, used for replying to the user</param>
         /// <param name="author">The author of the original message</param>
-        public static async void MakePrediction(string attachmentUrl, ISocketMessageChannel channel, IUser author) {
+        public static async Task MakePrediction(string attachmentUrl, ISocketMessageChannel channel, IUser author) {
             if (await ChannelInImageBlacklist(channel)) {
                 return;
             }
@@ -68,7 +68,7 @@ namespace Stringdicator {
             // Check the image size is within the limits and resize if necessary
             image = await ResizeImage(image);
             if (image.Length > 4000000) {
-                await channel.SendMessageAsync("Image is too large to be classified.");
+                Console.WriteLine("Image is too large to be classified.");
                 return;
             }
 

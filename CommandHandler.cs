@@ -82,18 +82,18 @@ namespace Stringdicator {
                     continue;
                 }
 
-                ImagePrediction.MakePrediction(attachment.Url, context.Channel, context.User);
+                await ImagePrediction.MakePrediction(attachment.Url, context.Channel, context.User);
                 return;
             }
 
             if (message.Content.StartsWith("https://tenor.com") || message.Content.StartsWith("https://media.discordapp.net")) {
                 if (!message.Content.StartsWith("https://tenor.com/view")) {
                     var check = await _httpClient.GetAsync(new Uri(message.Content));
-                    ImagePrediction.MakePrediction(check.RequestMessage?.RequestUri + ".gif", context.Channel, context.User);
+                    await ImagePrediction.MakePrediction(check.RequestMessage?.RequestUri + ".gif", context.Channel, context.User);
                     return;
                 }
 
-                ImagePrediction.MakePrediction(message.Content + ".gif", context.Channel, context.User);
+                await ImagePrediction.MakePrediction(message.Content + ".gif", context.Channel, context.User);
             }
         }
 
@@ -245,7 +245,7 @@ namespace Stringdicator {
 
             //Is thumbs up react and not made by stringdicator
             if (reaction.Emote.Equals(new Emoji("\U0001F44D"))) {
-                await cachedMessageValue.DeleteAsync();
+                var delete = cachedMessageValue.DeleteAsync();
 
                 var context = new SocketCommandContext(_discordClient,
                     cachedMessageValue as SocketUserMessage
@@ -256,8 +256,8 @@ namespace Stringdicator {
                     var builder = await ExtraModule.NoAnime(context.Guild, user);
                     await context.Channel.SendMessageAsync(embed: builder.Build());
                 }
-                
-                
+
+                await delete;
                 // Thumbs down react and not made by stringdicator    
             } else if (reaction.Emote.Equals(new Emoji("\U0001F44E"))) {
                 await cachedChannelValue.DeleteMessageAsync(cachedMessageValue);
