@@ -73,6 +73,14 @@ namespace Stringdicator {
                 Console.WriteLine($"{DateTime.Now}: Image is too large to be classified.");
                 return;
             }
+            
+            // Check aspect ratio is lower than 25:1
+            var imageStream = new MemoryStream(image);
+            var img = new Bitmap(imageStream);
+            if (img.Width / img.Height > 25) {
+                Console.WriteLine($"{DateTime.Now}: Image aspect ratio is too wide to be classified.");
+                return;
+            }
 
             await MakePredictionRequest(image, channel, author);
         }
