@@ -33,12 +33,14 @@ namespace Stringdicator {
                 var a when a.Contains(".png") => attachmentUrl.Split(".png")[0] + ".png",
                 var a when a.Contains(".jpeg") => attachmentUrl.Split(".jpeg")[0] + ".jpeg",
                 var a when a.Contains(".gif") => attachmentUrl.Split(".gif")[0] + ".gif",
+                var a when a.Contains("?format=jpg") => attachmentUrl.Split("?format=jpg")[0] + ".jpg", // Special Case for Twitter Images
                 _ => attachmentUrl
             };
 
             var extension = Path.GetExtension(attachmentUrl); //Get the extension for use later
             if (!extension.Equals(".gif") && !extension.Equals(".jpg") && !extension.Equals(".png") &&
                 !extension.Equals("jpeg")) {
+                Console.WriteLine($"{DateTime.Now}: Image Classification was not successful. Invalid file type");
                 return;
             }
 
@@ -46,7 +48,7 @@ namespace Stringdicator {
             try {
                 image = await HttpClient.GetByteArrayAsync(new Uri(attachmentUrl));
             } catch (HttpRequestException exception) {
-                Console.WriteLine("Image Classification was not successful. " + exception.Message);
+                Console.WriteLine($"{DateTime.Now}: Image Classification was not successful. " + exception.Message);
                 return;
             }
 
@@ -60,7 +62,7 @@ namespace Stringdicator {
                     bitmap.Save(stream, System.Drawing.Imaging.ImageFormat.Png);
                     image = stream.ToArray();
                 } catch (Exception exception) {
-                    Console.WriteLine("Image Classification was not successful. " + exception.Message);
+                    Console.WriteLine($"{DateTime.Now}: Image Classification was not successful. " + exception.Message);
                     return;
                 }
             }
@@ -68,18 +70,10 @@ namespace Stringdicator {
             // Check the image size is within the limits and resize if necessary
             image = await ResizeImage(image);
             if (image.Length > 4000000) {
-                Console.WriteLine("Image is too large to be classified.");
+                Console.WriteLine($"{DateTime.Now}: Image is too large to be classified.");
                 return;
             }
 
-            // Check that the image dimensions are within accepted custom vision bounds
-            var imageStream = new MemoryStream(image);
-            var img = new Bitmap(imageStream);
-            if (img.Width < 256 || img.Height < 256 || img.Width > 10240 || img.Height > 10240) {
-                Console.WriteLine("Image is not within accepted custom vision dimensions");
-                return;
-            }
-            
             await MakePredictionRequest(image, channel, author);
         }
 
@@ -102,7 +96,7 @@ namespace Stringdicator {
             var response = await HttpClient.PostAsync(url, content);
 
             if (!response.IsSuccessStatusCode) {
-                Console.WriteLine($"Image Classification request was not successful. Error code {response.StatusCode}.");
+                Console.WriteLine($"{DateTime.Now}: Image Classification request was not successful. Error code {response.StatusCode}.");
                 return;
             }
 
@@ -112,7 +106,7 @@ namespace Stringdicator {
             //Get the top prediction
             var prediction = result["predictions"]?.FirstOrDefault();
             if (prediction == null) {
-                Console.WriteLine("Image Classification request was not successful. Bad response.");
+                Console.WriteLine($"{DateTime.Now}: Image Classification request was not successful. Bad response.");
                 return;
             }
 
