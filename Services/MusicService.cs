@@ -36,6 +36,11 @@ namespace Stringdicator.Services {
         private async Task OnTrackEnded(TrackEndedEventArgs args) {
             if (args.Reason == TrackEndReason.LoadFailed) {
                 await args.Player.TextChannel.SendMessageAsync("The track failed to load, skipping");
+                // If there is no next track, stop the player
+                if (!args.Player.Queue.TryDequeue(out var nextTrack)) {
+                    await _lavaNode.LeaveAsync(args.Player.VoiceChannel);
+                    return;
+                }
                 await args.Player.SkipAsync();
             }
             if (args.Reason != TrackEndReason.Finished) {
@@ -43,6 +48,11 @@ namespace Stringdicator.Services {
             }
 
             if (args.Player.Track is null && args.Player.PlayerState != PlayerState.Stopped) {
+                // If there is no next track, stop the player
+                if (!args.Player.Queue.TryDequeue(out var nextTrack)) {
+                    await _lavaNode.LeaveAsync(args.Player.VoiceChannel);
+                    return;
+                }
                 await args.Player.SkipAsync();
             }
 
