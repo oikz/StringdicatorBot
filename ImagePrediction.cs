@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -8,6 +7,8 @@ using System.Threading.Tasks;
 using Discord;
 using Discord.WebSocket;
 using Newtonsoft.Json.Linq;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Processing;
 using Stringdicator.Database;
 
 namespace Stringdicator {
@@ -56,10 +57,9 @@ namespace Stringdicator {
             //Get the first frame and save it as a png in the same format
             if (extension.Equals(".gif")) {
                 try {
-                    var gifImg = System.Drawing.Image.FromStream(new MemoryStream(image));
-                    var bitmap = new Bitmap(gifImg);
+                    var gifImg = SixLabors.ImageSharp.Image.Load(image);
                     await using var stream = new MemoryStream();
-                    bitmap.Save(stream, System.Drawing.Imaging.ImageFormat.Png);
+                    await gifImg.SaveAsPngAsync(stream);
                     image = stream.ToArray();
                 } catch (Exception exception) {
                     Console.WriteLine($"{DateTime.Now}: Image Classification was not successful. " + exception.Message);
@@ -75,8 +75,7 @@ namespace Stringdicator {
             }
             
             // Check aspect ratio is lower than 25:1
-            var imageStream = new MemoryStream(image);
-            var img = new Bitmap(imageStream);
+            var img = SixLabors.ImageSharp.Image.Load(image);
             if (img.Width / img.Height > 25) {
                 Console.WriteLine($"{DateTime.Now}: Image aspect ratio is too wide to be classified.");
                 return;
@@ -152,17 +151,17 @@ namespace Stringdicator {
             if (img.Length <= 4000000) return img;
             
             //Resize to 1920x1080
-            var image = System.Drawing.Image.FromStream(new MemoryStream(img));
-            var bmp = new Bitmap(image, 1920, 1080);
+            var image = SixLabors.ImageSharp.Image.Load(img);
+            image.Mutate(x => x.Resize(1920, 1080));
             await using var stream = new MemoryStream();
-            bmp.Save(stream, System.Drawing.Imaging.ImageFormat.Png);
+            await image.SaveAsPngAsync(stream);
             img = stream.ToArray();
             
             if (img.Length <= 4000000) return img;
             
             // Resize to 1280x720
-            bmp = new Bitmap(image, 1280, 720);
-            bmp.Save(stream, System.Drawing.Imaging.ImageFormat.Png);
+            image.Mutate(x => x.Resize(1280, 720));
+            await image.SaveAsPngAsync(stream);
             img = stream.ToArray();
             return img;
         }
