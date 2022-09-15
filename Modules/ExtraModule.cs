@@ -84,7 +84,7 @@ namespace Stringdicator.Modules {
         /// <param name="guild">The guild that the user is in</param>
         /// <param name="user">The user receiving the violation</param>
         /// <returns></returns>
-        public static async Task<EmbedBuilder> NoAnime(SocketGuild guild, IUser user) {
+        public static async Task<EmbedBuilder> NoAnime(IGuild guild, IUser user) {
             var builder = new EmbedBuilder();
 
             await guild.DownloadUsersAsync();

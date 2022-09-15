@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Discord;
 using Discord.Commands;
 using Discord.Interactions;
+using Discord.Rest;
 using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
 using Stringdicator.Database;
@@ -119,6 +120,9 @@ namespace Stringdicator {
             var cachedMessageValue = await cachedMessage.GetOrDownloadAsync();
             var cachedChannelValue = await channel.GetOrDownloadAsync();
 
+            if (cachedChannelValue is null) {
+                return;
+            }
             
             // Ignore deleted messages from other bots
             if (cachedMessageValue.Author.IsBot || cachedMessageValue.Author.Id.Equals(_discordClient.CurrentUser.Id)) {
@@ -247,14 +251,28 @@ namespace Stringdicator {
             if (reaction.Emote.Equals(new Emoji("\U0001F44D"))) {
                 var delete = cachedMessageValue.DeleteAsync();
 
-                var context = new SocketCommandContext(_discordClient,
-                    cachedMessageValue as SocketUserMessage
-                );
-                var mention = cachedMessageValue.Content.Split("- ")[1];
-                foreach (var user in context.Guild.Users) {
-                    if (!user.Mention.Equals(mention)) continue;
-                    var builder = await ExtraModule.NoAnime(context.Guild, user);
-                    await context.Channel.SendMessageAsync(embed: builder.Build());
+                if (cachedMessageValue.GetType() == typeof(RestUserMessage)) {
+                    // Problem is that old messages are returned as RestUserMessages instead of SocketUserMessages ...
+                    var context = new CommandContext(_discordClient,
+                        cachedMessageValue
+                    );
+                    var mention = cachedMessageValue.Content.Split("- ")[1];
+                    foreach (var user in ((SocketGuild)context.Guild).Users) {
+                        if (!user.Mention.Equals(mention)) continue;
+                        var builder = await ExtraModule.NoAnime((SocketGuild)context.Guild, user);
+                        await context.Channel.SendMessageAsync(embed: builder.Build());
+                    }
+                } else {
+                    // Problem is that old messages are returned as RestUserMessages instead of SocketUserMessages ...
+                    var context = new SocketCommandContext(_discordClient,
+                        cachedMessageValue as SocketUserMessage
+                    );
+                    var mention = cachedMessageValue.Content.Split("- ")[1];
+                    foreach (var user in context.Guild.Users) {
+                        if (!user.Mention.Equals(mention)) continue;
+                        var builder = await ExtraModule.NoAnime(context.Guild, user);
+                        await context.Channel.SendMessageAsync(embed: builder.Build());
+                    }
                 }
 
                 await delete;
