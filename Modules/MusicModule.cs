@@ -87,6 +87,11 @@ namespace Stringdicator.Modules {
             if (!_lavaNode.HasPlayer(Context.Guild)) {
                 await JoinAsync();
             }
+            
+            //Convert shortened link to full link
+            if (searchQuery.Contains("youtu.be")) {
+                searchQuery = searchQuery.Replace("youtu.be/", "youtube.com/watch?v=");
+            }
 
             var index = 0;
             if (searchQuery.Contains("youtube.com/watch?v=") && searchQuery.Contains("&list=")) {
@@ -134,6 +139,11 @@ namespace Stringdicator.Modules {
             //Join the voice channel if not already in it
             if (!_lavaNode.HasPlayer(Context.Guild)) {
                 await JoinAsync();
+            }
+            
+            //Convert shortened link to full link
+            if (searchQuery.Contains("youtu.be")) {
+                searchQuery = searchQuery.Replace("youtu.be/", "youtube.com/watch?v=");
             }
 
             var index = 0;
