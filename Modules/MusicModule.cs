@@ -104,6 +104,11 @@ namespace Stringdicator.Modules {
                 }
             }
 
+            //Get the timestamp from the search query if present
+            searchQuery = searchQuery.Replace("?t=", "&t=");
+            var timestampString = searchQuery.Contains("&t=") ? searchQuery.Split("&t=")[1] : null;
+            var timestamp = TimeSpan.FromSeconds(Convert.ToDouble(timestampString));
+            
             var searchType = searchQuery.Contains("youtube.com/") ? SearchType.Direct : SearchType.YouTube;
 
             //Find the search result from the search terms
@@ -120,7 +125,7 @@ namespace Stringdicator.Modules {
                 await QueueNow(searchResponse, player, false, index);
                 //Play this track now
             } else {
-                await PlayNow(searchResponse, player, index);
+                await PlayNow(searchResponse, player, index, timestamp);
             }
         }
 
@@ -205,8 +210,10 @@ namespace Stringdicator.Modules {
         /// </summary>
         /// <param name="searchResponse">The response received from the user's search</param>
         /// <param name="player">The LavaPlayer that should play this track</param>
-        /// <param name="index"></param>
-        private async Task PlayNow(SearchResponse searchResponse, LavaPlayer player, int index) {
+        /// <param name="index">The index in the playlist</param>
+        /// <param name="timestamp">The timestamp to start the video at</param>
+        private async Task PlayNow(SearchResponse searchResponse, LavaPlayer player, int index, TimeSpan? timestamp = null) {
+            timestamp ??= TimeSpan.Zero;
             var track = searchResponse.Tracks.ElementAt(index);
 
             //Play list queueing
@@ -214,6 +221,7 @@ namespace Stringdicator.Modules {
                 for (var i = index; i < searchResponse.Tracks.Count; i++) {
                     if (i == 0 || i == index) {
                         await player.PlayAsync(track);
+                        await player.SeekAsync(timestamp);
                         await EmbedText($"Now Playing: {track.Title}", true,
                             "Duration: " + TrimTime(track.Duration.ToString(@"dd\:hh\:mm\:ss")),
                             await track.FetchArtworkAsync(), true);
@@ -228,6 +236,7 @@ namespace Stringdicator.Modules {
             } else {
                 //Single Track queueing
                 await player.PlayAsync(track);
+                await player.SeekAsync(timestamp);
                 await EmbedText($"Now Playing: {track.Title}", true,
                     "Duration: " + TrimTime(track.Duration.ToString(@"dd\:hh\:mm\:ss")),
                     await track.FetchArtworkAsync());
