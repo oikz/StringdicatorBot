@@ -86,6 +86,12 @@ namespace Stringdicator {
                 await ImagePrediction.MakePrediction(attachment.Url, context.Channel, context.User);
                 return;
             }
+            
+            //Check if the message is a sticker
+            if (message.Stickers.Count > 0) {
+                await ImagePrediction.MakePrediction(message.Stickers.First().GetStickerUrl(), context.Channel, context.User);
+                return;
+            }
 
             if (message.Content.StartsWith("https://tenor.com") || message.Content.StartsWith("https://media.discordapp.net")) {
                 if (!message.Content.StartsWith("https://tenor.com/view")) {
