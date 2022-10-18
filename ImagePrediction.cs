@@ -94,12 +94,12 @@ namespace Stringdicator {
         private static async Task MakePredictionRequest(byte[] image, ISocketMessageChannel channel, IUser author) {
             //Prediction endpoint
             const string url =
-                "https://string3-prediction.cognitiveservices.azure.com/customvision/v3.0/Prediction/fc50bffa-e84d-4043-b691-58c1e27a35d7/classify/iterations/NoAnime7/image";
+                "https://string-prediction.cognitiveservices.azure.com/customvision/v3.0/Prediction/31f1189e-9aa0-40df-acdc-cf9364a4836c/classify/iterations/NoAnime8/image";
 
             // Sends the image as a byte array to the endpoint to run a prediction on it
             using var content = new ByteArrayContent(image);
             content.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
-            content.Headers.Add("Prediction-Key", "1414d8884b384beba783ebba4a225082");
+            content.Headers.Add("Prediction-Key", "323fbb7c35b34af48005a8563b95333d");
             var response = await HttpClient.PostAsync(url, content);
 
             if (!response.IsSuccessStatusCode) {
