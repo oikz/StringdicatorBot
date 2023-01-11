@@ -15,6 +15,8 @@ namespace Stringdicator.Services {
     /// </summary>
     public class MusicService {
         private readonly LavaNode _lavaNode;
+        public LavaTrack RequeueCurrentTrack { get; set; }
+        public List<LavaTrack> Requeue { get; set; }
 
         /// <summary>
         /// Constructor for music module to retrieve the lavaNode in use
@@ -59,6 +61,19 @@ namespace Stringdicator.Services {
             //If queue is empty, return
             var player = args.Player;
             if (!player.Queue.TryDequeue(out var queueable)) {
+                
+                // Restore the previously playing tracks if they were interrupted by a voice line
+                if (RequeueCurrentTrack != null) {
+                    await player.PlayAsync(RequeueCurrentTrack);
+                    await player.SeekAsync(RequeueCurrentTrack.Position);
+                    RequeueCurrentTrack = null;
+                }
+                if (Requeue.Count > 0) {
+                    player.Queue.Enqueue(Requeue);
+                    Requeue = new List<LavaTrack>();
+                    return;
+                }
+                
                 await _lavaNode.LeaveAsync(player.VoiceChannel);
                 return;
             }

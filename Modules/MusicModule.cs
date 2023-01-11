@@ -1,11 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Discord;
 using Discord.Interactions;
+using Stringdicator.Database;
 using Stringdicator.Services;
+using Stringdicator.Util;
 using Victoria;
 using Victoria.Enums;
 using Victoria.Responses.Search;
@@ -17,6 +20,8 @@ namespace Stringdicator.Modules {
     public class MusicModule : InteractionModuleBase<SocketInteractionContext> {
         private readonly LavaNode _lavaNode;
         private readonly MusicService _musicService;
+        private readonly HttpClient _httpClient;
+        private readonly ApplicationContext _applicationContext;
 
         /// <summary>
         /// Constructor for music module to retrieve the lavaNode in use
@@ -24,9 +29,11 @@ namespace Stringdicator.Modules {
         /// </summary>
         /// <param name="lavaNode">The lavaNode to be used for audio playback</param>
         /// <param name="musicService">The musicService responsible for handling music events</param>
-        public MusicModule(LavaNode lavaNode, MusicService musicService) {
+        public MusicModule(LavaNode lavaNode, MusicService musicService, HttpClient httpClient, ApplicationContext applicationContext) {
             _lavaNode = lavaNode;
             _musicService = musicService;
+            _httpClient = httpClient;
+            _applicationContext = applicationContext;
         }
 
         /// <summary>
@@ -536,6 +543,67 @@ namespace Stringdicator.Modules {
             };
 
             return time;
+        }
+        
+                
+        /// <summary>
+        /// Display the number of Gorilla moments that each member has had.
+        /// </summary>
+        [SlashCommand("refreshresponses", "Refresh the Dota 2 Responses Database")]
+        [RequireOwner]
+        public async Task RefreshResponses() {
+            await DeferAsync(ephemeral: true);
+            await ResponseUtils.RefreshResponses(_httpClient, _applicationContext);
+            await FollowupAsync("Responses Refreshed", ephemeral: true);
+        }
+        
+        /// <summary>
+        /// Search for and try to play a Dota 2 response
+        /// </summary>
+        [SlashCommand("dota2response", "Search for and try to play a Dota 2 response")]
+        public async Task Dota2Response([Summary("query", "The query to search for")] string query) {
+            await DeferAsync(ephemeral: true);
+            if (!UserInVoice().Result) {
+                await FollowupAsync("You must be in a voice chat to use this command", ephemeral: true);
+                return;
+            }
+            
+            
+            var response = ResponseUtils.GetResponse(query, _applicationContext);
+            if (response is null) {
+                await FollowupAsync("No response found for that query", ephemeral: true);
+            } else {
+                await PlayLink(response.Url);
+                await FollowupAsync($"{response.ResponseText} - {response.Hero.Name}", ephemeral: true);
+            }
+        }
+
+        /// <summary>
+        /// Play a given link as an audio file, storing the currently playing track and queue to be restored after the
+        /// link finishes playing.
+        /// </summary>
+        /// <param name="url">The audio url to play</param>
+        private async Task PlayLink(string url) {
+            if (!_lavaNode.HasPlayer(Context.Guild)) {
+                await JoinAsync();
+            }
+            var player = _lavaNode.GetPlayer(Context.Guild);
+            var track = await _lavaNode.SearchAsync(SearchType.Direct, url);
+            
+            // If there is a queue, store it temporarily and restore afterwards
+            var backup = new List<LavaTrack>();
+            backup.AddRange(player.Queue.RemoveRange(0, player.Queue.Count));
+            player.Queue.Clear();
+            
+            // If there is a track currently playing, pause it and store it temporarily
+            var currentTrack = player.Track;
+            if (currentTrack != null) {
+                await player.PauseAsync();
+            }
+
+            await player.PlayAsync(track.Tracks.ElementAt(0));
+            _musicService.Requeue = backup;
+            _musicService.RequeueCurrentTrack = currentTrack;
         }
     }
 }
