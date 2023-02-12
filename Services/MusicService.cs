@@ -36,6 +36,7 @@ namespace Stringdicator.Services {
         /// </summary>
         /// <param name="args">The information about the track that has ended</param>
         private async Task OnTrackEnded(TrackEndedEventArgs args) {
+            await Task.Delay(1000);
             if (args.Reason == TrackEndReason.LoadFailed) {
                 await args.Player.TextChannel.SendMessageAsync("The track failed to load, skipping");
                 // If there is no next track, stop the player
@@ -45,6 +46,7 @@ namespace Stringdicator.Services {
                 }
                 await args.Player.SkipAsync();
             }
+            
             if (args.Reason != TrackEndReason.Finished) {
                 return;
             }
