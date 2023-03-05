@@ -124,6 +124,22 @@ public static class ResponseUtils {
     /// <param name="applicationContext">Database Access</param>
     /// <returns></returns>
     public static Response GetResponse(string query, ApplicationContext applicationContext) {
-        return applicationContext.Responses.Include(x => x.Hero).FirstOrDefault(x => x.ResponseText.Equals(query));
+        // Take the query, remove any !, ., or ? characters and then create a list of queries, with one each using !, ., and ?
+        query = query.Replace("!", "").Replace(".", "").Replace("?", "");
+        query = query.ToLower();
+        var queries = new List<string> {
+            query + "!",
+            query + ".",
+            query + "?",
+            query + "...?",
+            query + "...!",
+            query + "..."
+        };
+        
+        // For each query, check if it exists in the database and return the first one that does
+        return queries
+            .Select(q => applicationContext.Responses.Include(x => x.Hero)
+                .FirstOrDefault(x => x.ResponseText.ToLower().Equals(q)))
+            .FirstOrDefault(response => response is not null);
     }
 }
