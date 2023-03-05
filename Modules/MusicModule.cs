@@ -563,8 +563,9 @@ namespace Stringdicator.Modules {
         [SlashCommand("dota2response", "Search for and try to play a Dota 2 response")]
         public async Task Dota2Response([Summary("query", "The query to search for")] string query) {
             await DeferAsync(ephemeral: true);
-            if (!UserInVoice().Result) {
-                await FollowupAsync("You must be in a voice chat to use this command", ephemeral: true);
+
+            if ((Context.User as IVoiceState)?.VoiceChannel == null) {
+                await FollowupAsync("You must be in a voice channel to use this command", ephemeral: true);
                 return;
             }
             
