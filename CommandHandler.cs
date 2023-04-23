@@ -12,7 +12,8 @@ using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
 using Stringdicator.Database;
 using Stringdicator.Modules;
-using Victoria;
+using Victoria.Node;
+using Victoria.Player;
 
 namespace Stringdicator {
     /// <summary>
@@ -24,7 +25,7 @@ namespace Stringdicator {
         private readonly InteractionService _interactions;
         private StreamWriter _logFile;
         private readonly IServiceProvider _services;
-        private readonly LavaNode _lavaNode;
+        private readonly LavaNode<LavaPlayer, LavaTrack> _lavaNode;
         private readonly HttpClient _httpClient;
         private readonly ApplicationContext _applicationContext;
 
@@ -37,7 +38,7 @@ namespace Stringdicator {
             _services = services;
             _discordClient = _services.GetRequiredService<DiscordSocketClient>();
             _interactions = _services.GetRequiredService<InteractionService>();
-            _lavaNode = _services.GetRequiredService<LavaNode>();
+            _lavaNode = _services.GetRequiredService<LavaNode<LavaPlayer, LavaTrack>>();
             _httpClient = _services.GetRequiredService<HttpClient>();
             _applicationContext = _services.GetRequiredService<ApplicationContext>();
         }

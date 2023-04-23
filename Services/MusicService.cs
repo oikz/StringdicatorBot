@@ -6,15 +6,16 @@ using Discord;
 using Discord.WebSocket;
 using Stringdicator.Modules;
 using Victoria;
-using Victoria.Enums;
-using Victoria.EventArgs;
+using Victoria.Node;
+using Victoria.Node.EventArgs;
+using Victoria.Player;
 
 namespace Stringdicator.Services {
     /// <summary>
     /// Music service for handling all of the events coming from audio playback in one place
     /// </summary>
     public class MusicService {
-        private readonly LavaNode _lavaNode;
+        private readonly LavaNode<LavaPlayer, LavaTrack> _lavaNode;
         public LavaTrack RequeueCurrentTrack { get; set; }
         public List<LavaTrack> Requeue { get; set; }
 
@@ -23,9 +24,9 @@ namespace Stringdicator.Services {
         /// Uses the lavaNode for retrieving/managing/playing audio to voice channels
         /// </summary>
         /// <param name="lavaNode">The lavaNode to be used for audio playback</param>
-        public MusicService(LavaNode lavaNode) {
+        public MusicService(LavaNode<LavaPlayer, LavaTrack> lavaNode) {
             _lavaNode = lavaNode;
-            _lavaNode.OnTrackEnded += OnTrackEnded;
+            _lavaNode.OnTrackEnd += OnTrackEnd;
             _lavaNode.OnTrackException += OnTrackException;
             _lavaNode.OnTrackStuck += OnTrackStuck;
         }
@@ -35,12 +36,11 @@ namespace Stringdicator.Services {
         /// Obtained mostly from the Victoria Tutorial pages
         /// </summary>
         /// <param name="args">The information about the track that has ended</param>
-        private async Task OnTrackEnded(TrackEndedEventArgs args) {
+        private async Task OnTrackEnd(TrackEndEventArg<LavaPlayer, LavaTrack> args) {
             await Task.Delay(1000);
             if (args.Reason == TrackEndReason.LoadFailed) {
-                await args.Player.TextChannel.SendMessageAsync("The track failed to load, skipping");
                 // If there is no next track, stop the player
-                if (!args.Player.Queue.TryDequeue(out var nextTrack)) {
+                if (!args.Player.Vueue.Any()) {
                     await _lavaNode.LeaveAsync(args.Player.VoiceChannel);
                     return;
                 }
@@ -53,7 +53,7 @@ namespace Stringdicator.Services {
 
             if (args.Player.Track is null && args.Player.PlayerState != PlayerState.Stopped) {
                 // If there is no next track, stop the player
-                if (!args.Player.Queue.TryDequeue(out var nextTrack)) {
+                if (!args.Player.Vueue.TryDequeue(out var nextTrack)) {
                     await _lavaNode.LeaveAsync(args.Player.VoiceChannel);
                     return;
                 }
@@ -62,7 +62,7 @@ namespace Stringdicator.Services {
 
             //If queue is empty, return
             var player = args.Player;
-            if (!player.Queue.TryDequeue(out var queueable)) {
+            if (!player.Vueue.TryDequeue(out var queueable)) {
                 
                 // Restore the previously playing tracks if they were interrupted by a voice line
                 if (RequeueCurrentTrack != null) {
@@ -71,7 +71,7 @@ namespace Stringdicator.Services {
                     RequeueCurrentTrack = null;
                 }
                 if (Requeue?.Count > 0) {   
-                    player.Queue.Enqueue(Requeue);
+                    player.Vueue.Enqueue(Requeue);
                     Requeue = new List<LavaTrack>();
                     return;
                 }
@@ -118,38 +118,49 @@ namespace Stringdicator.Services {
         /// The method called when a track has an exception
         /// </summary>
         /// <param name="args">The information about the track that has ended</param>
-        private static async Task OnTrackException(TrackExceptionEventArgs args) {
-            var test = new List<LavaTrack>();
-            if (args.Exception.Message.Contains("This video is not available") || args.Player.Track is null) {
+        private async Task OnTrackException(TrackExceptionEventArg<LavaPlayer, LavaTrack> args) {
+            var backup = new List<LavaTrack>();
+            if (args.Exception.Message.Contains("This video is not available") || args.Exception.Message.Contains("This video is unavailable")) {
+                backup.AddRange(args.Player.Vueue.RemoveRange(0, args.Player.Vueue.Count));
+                args.Player.Vueue.Clear();
+                args.Player.Vueue.Enqueue(args.Track);
+                args.Player.Vueue.Enqueue(backup);
+                return;
+            }
+            if (args.Player.Track is null) {
+                if (args.Player.Vueue.Count == 0) {
+                    await _lavaNode.LeaveAsync(args.Player.VoiceChannel);
+                    return;
+                }
                 await args.Player.SkipAsync();
                 return;
             }
-            test.AddRange(args.Player.Queue.RemoveRange(0, args.Player.Queue.Count));
-            args.Player.Queue.Clear();
+            backup.AddRange(args.Player.Vueue.RemoveRange(0, args.Player.Vueue.Count));
+            args.Player.Vueue.Clear();
             try {
                 await args.Player.PlayAsync(args.Track);
             } catch (Exception e) {
                 Console.WriteLine(e);
             }
 
-            args.Player.Queue.Enqueue(test);
+            args.Player.Vueue.Enqueue(backup);
         }
 
         /// <summary>
         /// The method called when a track gets stuck
         /// </summary>
         /// <param name="args">The information about the track that has ended</param>
-        private static async Task OnTrackStuck(TrackStuckEventArgs args) {
+        private static async Task OnTrackStuck(TrackStuckEventArg<LavaPlayer, LavaTrack> args) {
             var test = new List<LavaTrack>();
-            test.AddRange(args.Player.Queue.RemoveRange(0, args.Player.Queue.Count));
-            args.Player.Queue.Clear();
+            test.AddRange(args.Player.Vueue.RemoveRange(0, args.Player.Vueue.Count));
+            args.Player.Vueue.Clear();
             try {
                 await args.Player.PlayAsync(args.Track);
             } catch (Exception e) {
                 Console.WriteLine(e);
             }
 
-            args.Player.Queue.Enqueue(test);
+            args.Player.Vueue.Enqueue(test);
         }
     }
 }

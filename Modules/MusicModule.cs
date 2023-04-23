@@ -10,7 +10,8 @@ using Stringdicator.Database;
 using Stringdicator.Services;
 using Stringdicator.Util;
 using Victoria;
-using Victoria.Enums;
+using Victoria.Node;
+using Victoria.Player;
 using Victoria.Responses.Search;
 
 namespace Stringdicator.Modules {
@@ -18,7 +19,7 @@ namespace Stringdicator.Modules {
     /// Module containing all Music related commands
     /// </summary>
     public class MusicModule : InteractionModuleBase<SocketInteractionContext> {
-        private readonly LavaNode _lavaNode;
+        private readonly LavaNode<LavaPlayer, LavaTrack> _lavaNode;
         private readonly MusicService _musicService;
         private readonly HttpClient _httpClient;
         private readonly ApplicationContext _applicationContext;
@@ -29,7 +30,7 @@ namespace Stringdicator.Modules {
         /// </summary>
         /// <param name="lavaNode">The lavaNode to be used for audio playback</param>
         /// <param name="musicService">The musicService responsible for handling music events</param>
-        public MusicModule(LavaNode lavaNode, MusicService musicService, HttpClient httpClient, ApplicationContext applicationContext) {
+        public MusicModule(LavaNode<LavaPlayer, LavaTrack> lavaNode, MusicService musicService, HttpClient httpClient, ApplicationContext applicationContext) {
             _lavaNode = lavaNode;
             _musicService = musicService;
             _httpClient = httpClient;
@@ -73,7 +74,7 @@ namespace Stringdicator.Modules {
             }
 
             if (_lavaNode.HasPlayer(Context.Guild)) {
-                var player = _lavaNode.GetPlayer(Context.Guild);
+                _lavaNode.TryGetPlayer(Context.Guild, out var player);
                 await _lavaNode.LeaveAsync(player.VoiceChannel);
                 await RespondAsync("Leaving", ephemeral: true);
             }
@@ -120,13 +121,21 @@ namespace Stringdicator.Modules {
 
             //Find the search result from the search terms
             var searchResponse = await _lavaNode.SearchAsync(searchType, searchQuery);
+            
+            // Try again a couple of times for error handling
+            for (var i = 0; i < 10; i++) {
+                if (searchResponse.Exception.Message is "This video is unavailable") {
+                    searchResponse = await _lavaNode.SearchAsync(searchType, searchQuery);
+                }
+            }
+
             if (searchResponse.Status is SearchStatus.LoadFailed or SearchStatus.NoMatches) {
                 await EmbedText($"I wasn't able to find anything for `{searchQuery}`.", false);
                 return;
             }
 
             //Get the player and start playing/queueing a single track or playlist
-            var player = _lavaNode.GetPlayer(Context.Guild);
+            _lavaNode.TryGetPlayer(Context.Guild, out var player);
             //Queue up next track
             if (player.PlayerState is PlayerState.Playing or PlayerState.Paused) {
                 await QueueNow(searchResponse, player, false, index);
@@ -169,12 +178,20 @@ namespace Stringdicator.Modules {
 
             //Find the search result from the search terms
             var searchResponse = await _lavaNode.SearchAsync(searchType, searchQuery);
+                       
+            // Try again a couple of times for error handling
+            for (var i = 0; i < 10; i++) {
+                if (searchResponse.Exception.Message is "This video is unavailable") {
+                    searchResponse = await _lavaNode.SearchAsync(searchType, searchQuery);
+                }
+            }
+
             if (searchResponse.Status is SearchStatus.LoadFailed or SearchStatus.NoMatches) {
                 await EmbedText($"I wasn't able to find anything for `{searchQuery}`.", false);
                 return;
             }
 
-            var player = _lavaNode.GetPlayer(Context.Guild);
+            _lavaNode.TryGetPlayer(Context.Guild, out var player);
             await QueueNow(searchResponse, player, true, index);
         }
 
@@ -185,17 +202,17 @@ namespace Stringdicator.Modules {
         /// <param name="player">The LavaPlayer that should queue this track</param>
         /// <param name="insertAtTop">True if the track is to be added at the top of the queue</param>
         /// <param name="index">Used for adding tracks from a playlist from a given index of the playlist</param>
-        private async Task QueueNow(SearchResponse searchResponse, LavaPlayer player, bool insertAtTop, int index) {
+        private async Task QueueNow(SearchResponse searchResponse, LavaPlayer<LavaTrack> player, bool insertAtTop, int index) {
             var test = new List<LavaTrack>();
             if (insertAtTop) {
-                test.AddRange(player.Queue.RemoveRange(0, player.Queue.Count));
-                player.Queue.Clear();
+                test.AddRange(player.Vueue.RemoveRange(0, player.Vueue.Count));
+                player.Vueue.Clear();
             }
 
             //Playlist queueing
             if (!string.IsNullOrWhiteSpace(searchResponse.Playlist.Name)) {
                 for (var i = index; i < searchResponse.Tracks.Count; i++) {
-                    player.Queue.Enqueue(searchResponse.Tracks.ElementAt(i));
+                    player.Vueue.Enqueue(searchResponse.Tracks.ElementAt(i));
                 }
 
                 await EmbedText($"{searchResponse.Tracks.Count - index} tracks added to queue", true,
@@ -204,12 +221,12 @@ namespace Stringdicator.Modules {
             } else {
                 //Single track queueing
                 var track = searchResponse.Tracks.ElementAt(0);
-                player.Queue.Enqueue(track);
+                player.Vueue.Enqueue(track);
                 await EmbedText($"{track.Title}", true, TrimTime(track.Duration.ToString(@"dd\:hh\:mm\:ss")),
                     await track.FetchArtworkAsync(), true);
             }
 
-            player.Queue.Enqueue(test);
+            player.Vueue.Enqueue(test);
         }
 
         /// <summary>
@@ -219,8 +236,8 @@ namespace Stringdicator.Modules {
         /// <param name="player">The LavaPlayer that should play this track</param>
         /// <param name="index">The index in the playlist</param>
         /// <param name="timestamp">The timestamp to start the video at</param>
-        private async Task PlayNow(SearchResponse searchResponse, LavaPlayer player, int index, TimeSpan? timestamp = null) {
-            timestamp ??= TimeSpan.Zero;
+        private async Task PlayNow(SearchResponse searchResponse, LavaPlayer<LavaTrack> player, int index, TimeSpan? timestamp = null) {
+            var timestamp2 = timestamp ?? TimeSpan.Zero;
             var track = searchResponse.Tracks.ElementAt(index);
 
             //Play list queueing
@@ -228,12 +245,12 @@ namespace Stringdicator.Modules {
                 for (var i = index; i < searchResponse.Tracks.Count; i++) {
                     if (i == 0 || i == index) {
                         await player.PlayAsync(track);
-                        await player.SeekAsync(timestamp);
+                        await player.SeekAsync(timestamp2);
                         await EmbedText($"Now Playing: {track.Title}", true,
                             "Duration: " + TrimTime(track.Duration.ToString(@"dd\:hh\:mm\:ss")),
                             await track.FetchArtworkAsync(), true);
                     } else {
-                        player.Queue.Enqueue(searchResponse.Tracks.ElementAt(i));
+                        player.Vueue.Enqueue(searchResponse.Tracks.ElementAt(i));
                     }
                 }
 
@@ -243,7 +260,7 @@ namespace Stringdicator.Modules {
             } else {
                 //Single Track queueing
                 await player.PlayAsync(track);
-                await player.SeekAsync(timestamp);
+                await player.SeekAsync(timestamp2);
                 await EmbedText($"Now Playing: {track.Title}", true,
                     "Duration: " + TrimTime(track.Duration.ToString(@"dd\:hh\:mm\:ss")),
                     await track.FetchArtworkAsync());
@@ -261,17 +278,17 @@ namespace Stringdicator.Modules {
             }
             await DeferAsync();
             
-            var player = _lavaNode.GetPlayer(Context.Guild);
+            _lavaNode.TryGetPlayer(Context.Guild, out var player);
 
             if (index > 0) {
-                if (player.Queue.Count < index - 1) {
+                if (player.Vueue.Count < index - 1) {
                     await EmbedText("Index is longer than the queue length", false);
                     return;
                 }
 
-                await EmbedText("Track Skipped: ", true, player.Queue.ElementAt(index - 1).Title,
-                    await player.Queue.ElementAt(index - 1).FetchArtworkAsync());
-                player.Queue.RemoveAt(index - 1);
+                await EmbedText("Track Skipped: ", true, player.Vueue.ElementAt(index - 1).Title,
+                    await player.Vueue.ElementAt(index - 1).FetchArtworkAsync());
+                player.Vueue.RemoveAt(index - 1);
                 return;
             }
 
@@ -279,11 +296,11 @@ namespace Stringdicator.Modules {
             var builder = new EmbedBuilder();
             builder.WithTitle("Track Skipped: ");
             builder.WithDescription(player.Track.Title);
-            if (player.Queue.Count > 0) {
-                builder.WithThumbnailUrl(await player.Queue.ElementAt(0).FetchArtworkAsync());
+            if (player.Vueue.Count > 0) {
+                builder.WithThumbnailUrl(await player.Vueue.ElementAt(0).FetchArtworkAsync());
                 builder.AddField(new EmbedFieldBuilder {
                     Name = "Now Playing: ",
-                    Value = player.Queue.ElementAt(0).Title
+                    Value = player.Vueue.ElementAt(0).Title
                 });
             } else {
                 await _lavaNode.LeaveAsync(player.VoiceChannel);
@@ -312,9 +329,9 @@ namespace Stringdicator.Modules {
             }
             await DeferAsync();
 
-            var player = _lavaNode.GetPlayer(Context.Guild);
+            _lavaNode.TryGetPlayer(Context.Guild, out var player);
 
-            player.Queue.Clear();
+            player.Vueue.Clear();
             await EmbedText("Queue Cleared", false);
         }
 
@@ -328,7 +345,7 @@ namespace Stringdicator.Modules {
             }
             await DeferAsync();
             
-            var player = _lavaNode.GetPlayer(Context.Guild);
+            _lavaNode.TryGetPlayer(Context.Guild, out var player);
             await player.PauseAsync();
             await EmbedText("Paused", false);
         }
@@ -343,14 +360,14 @@ namespace Stringdicator.Modules {
                 return;
             }
 
-            if (_lavaNode.GetPlayer(Context.Guild).PlayerState.Equals(PlayerState.Playing)) {
+            _lavaNode.TryGetPlayer(Context.Guild, out var player);
+            if (player.PlayerState.Equals(PlayerState.Playing)) {
                 await RespondAsync("Already Playing", ephemeral: true);
                 return;
             }
             
             await DeferAsync();
 
-            var player = _lavaNode.GetPlayer(Context.Guild);
             await player.ResumeAsync();
             await EmbedText("Resumed", false);
         }
@@ -367,7 +384,7 @@ namespace Stringdicator.Modules {
             await DeferAsync();
 
 
-            var player = _lavaNode.GetPlayer(Context.Guild);
+            _lavaNode.TryGetPlayer(Context.Guild, out var player);
             if (player.PlayerState == PlayerState.None) {
                 await EmbedText("Not playing anything", false);
             }
@@ -388,9 +405,9 @@ namespace Stringdicator.Modules {
                 return;
             }
 
-            var player = _lavaNode.GetPlayer(Context.Guild);
+            _lavaNode.TryGetPlayer(Context.Guild, out var player);
             
-            if (player.Queue.Count == 0) {
+            if (player.Vueue.Count == 0) {
                 await CurrentTrackAsync();
                 return;
             }
@@ -398,19 +415,19 @@ namespace Stringdicator.Modules {
             await DeferAsync();
 
             if (player.PlayerState is PlayerState.Stopped or PlayerState.None &&
-                player.Queue.Count == 0) {
+                player.Vueue.Count == 0) {
                 await EmbedText("Queue is empty", false);
                 return;
             }
 
             page = (page - 1) * 5;
-            if (page > player.Queue.Count) {
+            if (page > player.Vueue.Count) {
                 return;
             }
 
             //Create an embed using that image url
             var builder = new EmbedBuilder();
-            builder.WithTitle($"String Music Queue - Length: {player.Queue.Count}");
+            builder.WithTitle($"String Music Queue - Length: {player.Vueue.Count}");
             builder.WithThumbnailUrl(await player.Track.FetchArtworkAsync());
             builder.WithColor(3447003);
             builder.WithDescription("");
@@ -429,14 +446,14 @@ namespace Stringdicator.Modules {
                 //Up next
                 builder.AddField(new EmbedFieldBuilder {
                     Name = "Next: ",
-                    Value = $"[{player.Queue.ElementAt(0).Title}]({player.Queue.ElementAt(0).Url})" +
-                            $"\n {TrimTime(player.Queue.ElementAt(0).Duration.ToString(@"dd\:hh\:mm\:ss"))}"
+                    Value = $"[{player.Vueue.ElementAt(0).Title}]({player.Vueue.ElementAt(0).Url})" +
+                            $"\n {TrimTime(player.Vueue.ElementAt(0).Duration.ToString(@"dd\:hh\:mm\:ss"))}"
                 });
 
 
                 //Remaining Queue
-                for (var i = 1; i < 4 && i < player.Queue.Count; i++) {
-                    var lavaTrack = player.Queue.ElementAt(i);
+                for (var i = 1; i < 4 && i < player.Vueue.Count; i++) {
+                    var lavaTrack = player.Vueue.ElementAt(i);
                     var fieldBuilder = new EmbedFieldBuilder {
                         Name = $"Queue position {i + 1}",
                         Value = $"[{lavaTrack.Title}]({lavaTrack.Url})" +
@@ -445,8 +462,8 @@ namespace Stringdicator.Modules {
                     builder.AddField(fieldBuilder);
                 }
             } else {
-                for (var i = page; i < page + 5 && i < player.Queue.Count; i++) {
-                    var lavaTrack = player.Queue.ElementAt(i);
+                for (var i = page; i < page + 5 && i < player.Vueue.Count; i++) {
+                    var lavaTrack = player.Vueue.ElementAt(i);
                     var fieldBuilder = new EmbedFieldBuilder {
                         Name = $"Queue position {i + 1}",
                         Value = $"[{lavaTrack.Title}]({lavaTrack.Url})" +
@@ -469,8 +486,8 @@ namespace Stringdicator.Modules {
             }
             await DeferAsync();
 
-            var player = _lavaNode.GetPlayer(Context.Guild);
-            player.Queue.Shuffle();
+            _lavaNode.TryGetPlayer(Context.Guild, out var player);
+            player.Vueue.Shuffle();
             await EmbedText("Queue Shuffled", false);
         }
 
@@ -505,7 +522,7 @@ namespace Stringdicator.Modules {
             
             // Check if the player that the user is in has gotten stuck and skip if so.
             if (_lavaNode.HasPlayer(Context.Guild) && voiceState?.VoiceChannel != null) {
-                var player = _lavaNode.GetPlayer(Context.Guild);
+                _lavaNode.TryGetPlayer(Context.Guild, out var player);
                 if (player.Track is null && player.PlayerState != PlayerState.None) await player.SkipAsync();
             }
             if (voiceState?.VoiceChannel != null) return true;
@@ -588,13 +605,13 @@ namespace Stringdicator.Modules {
             if (!_lavaNode.HasPlayer(Context.Guild)) {
                 await JoinAsync();
             }
-            var player = _lavaNode.GetPlayer(Context.Guild);
+            _lavaNode.TryGetPlayer(Context.Guild, out var player);
             var track = await _lavaNode.SearchAsync(SearchType.Direct, url);
             
             // If there is a queue, store it temporarily and restore afterwards
             var backup = new List<LavaTrack>();
-            backup.AddRange(player.Queue.RemoveRange(0, player.Queue.Count));
-            player.Queue.Clear();
+            backup.AddRange(player.Vueue.RemoveRange(0, player.Vueue.Count));
+            player.Vueue.Clear();
             
             // If there is a track currently playing, pause it and store it temporarily
             var currentTrack = player.Track;
