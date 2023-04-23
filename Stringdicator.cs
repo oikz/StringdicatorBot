@@ -27,7 +27,7 @@ namespace Stringdicator {
                 LogLevel = LogSeverity.Info,
                 MessageCacheSize = 250,
                 AlwaysDownloadUsers = true,
-                GatewayIntents = GatewayIntents.AllUnprivileged | GatewayIntents.GuildMembers
+                GatewayIntents = GatewayIntents.AllUnprivileged | GatewayIntents.GuildMembers | GatewayIntents.MessageContent
             });
             
             _interactions = new InteractionService(_discordClient, new InteractionServiceConfig() {
