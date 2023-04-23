@@ -70,7 +70,7 @@ namespace Stringdicator.Services {
                     await player.SeekAsync(RequeueCurrentTrack.Position);
                     RequeueCurrentTrack = null;
                 }
-                if (Requeue.Count > 0) {
+                if (Requeue?.Count > 0) {   
                     player.Queue.Enqueue(Requeue);
                     Requeue = new List<LavaTrack>();
                     return;
