@@ -18,6 +18,7 @@ namespace Stringdicator.Services {
         private readonly LavaNode<LavaPlayer, LavaTrack> _lavaNode;
         public LavaTrack RequeueCurrentTrack { get; set; }
         public List<LavaTrack> Requeue { get; set; }
+        private List<LavaPlayer> RepeatPlayer { get; } = new();
 
         /// <summary>
         /// Constructor for music module to retrieve the lavaNode in use
@@ -50,6 +51,16 @@ namespace Stringdicator.Services {
             if (args.Reason != TrackEndReason.Finished) {
                 return;
             }
+            
+            if (RepeatPlayer.Contains(args.Player)) {
+                // Put the current track on the top of the queue
+                var tempQueue = args.Player.Vueue;
+                args.Player.Vueue.Clear();
+                await args.Player.PlayAsync(args.Track);
+                args.Player.Vueue.Enqueue(tempQueue);
+                return;
+            }
+            
 
             if (args.Player.Track is null && args.Player.PlayerState != PlayerState.Stopped) {
                 // If there is no next track, stop the player
@@ -161,6 +172,18 @@ namespace Stringdicator.Services {
             }
 
             args.Player.Vueue.Enqueue(test);
+        }
+
+        /// <summary>
+        /// Repeat the current track on the current player
+        /// </summary>
+        /// <param name="player">The LavaPlayer for the server to repeat for</param>
+        public void RepeatTrack(LavaPlayer player) {
+            if (RepeatPlayer.Contains(player)) {
+                RepeatPlayer.Remove(player);
+            } else {
+                RepeatPlayer.Add(player);
+            }
         }
     }
 }

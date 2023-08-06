@@ -492,6 +492,20 @@ namespace Stringdicator.Modules {
         }
 
         /// <summary>
+        /// Enable or disable track repeating in the current server
+        /// </summary>
+        [SlashCommand("repeat", "Repeat the current track")]
+        private async Task RepeatTrack() {
+            if (!UserInVoice().Result || !BotInVoice().Result) {
+                return;
+            }
+            await DeferAsync(ephemeral: true);
+            _lavaNode.TryGetPlayer(Context.Guild, out var player);
+            _musicService.RepeatTrack(player);
+            await FollowupAsync("Now repeating track", ephemeral: true);
+        }
+
+        /// <summary>
         /// Embed and send a message with the provided parameters
         /// </summary>
         /// <param name="title">The title of the embed to send</param>
