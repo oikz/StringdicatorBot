@@ -14,11 +14,11 @@ namespace Stringdicator.Util;
 /// Responses 
 /// </summary>
 public static class ResponseUtils {
-    private const string CATEGORYURL = "https://dota2.fandom.com/api.php?action=query&format=json&list=categorymembers&cmlimit=max&cmprop=title&cmtitle=Category:Responses";
-    private const string RESPONSEURL = "https://dota2.fandom.com/wiki/";
-    private record CategoriesResponse(CategoriesQuery query);
-    private record CategoriesQuery(List<MemberResponse> categorymembers);
-    private record MemberResponse(string title);
+    private const string Categoryurl = "https://dota2.fandom.com/api.php?action=query&format=json&list=categorymembers&cmlimit=max&cmprop=title&cmtitle=Category:Responses";
+    private const string Responseurl = "https://dota2.fandom.com/wiki/";
+    private record CategoriesResponse(CategoriesQuery Query);
+    private record CategoriesQuery(List<MemberResponse> Categorymembers);
+    private record MemberResponse(string Title);
 
     /// <summary>
     /// Refresh the Heroes and Responses by using the Dota 2 Wiki
@@ -61,12 +61,12 @@ public static class ResponseUtils {
     /// <returns></returns>
     private static async Task<List<Hero>> GetHeroes(HttpClient httpClient) {
         // Send request to get all of the available heroes/responses
-        var response = await httpClient.GetAsync(CATEGORYURL);
+        var response = await httpClient.GetAsync(Categoryurl);
         var responseString = await response.Content.ReadAsStringAsync();
 
         // Parse the response to get the list of heroes
         var categories = JsonSerializer.Deserialize<CategoriesResponse>(responseString);
-        var titles = categories.query.categorymembers.Select(hero => hero.title).ToList();
+        var titles = categories.Query.Categorymembers.Select(hero => hero.Title).ToList();
 
         // Return new Hero objects with empty responses lists and ids
         return titles.Select(hero => new Hero {
@@ -85,7 +85,7 @@ public static class ResponseUtils {
     /// <returns></returns>
     private static async Task<List<Response>> GetResponses(HttpClient httpClient, Hero hero) {
         // Get the raw HTML for the page
-        var response = httpClient.GetAsync(RESPONSEURL + hero.Page);
+        var response = httpClient.GetAsync(Responseurl + hero.Page);
         var responseString = await response.Result.Content.ReadAsStringAsync();
 
         // Parse the HTML of the string to get the list of responses

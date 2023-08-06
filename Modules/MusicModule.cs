@@ -31,6 +31,8 @@ public class MusicModule : InteractionModuleBase<SocketInteractionContext> {
     /// </summary>
     /// <param name="lavaNode">The lavaNode to be used for audio playback</param>
     /// <param name="musicService">The musicService responsible for handling music events</param>
+    /// <param name="httpClient">The httpClient to be used for making http requests</param>
+    /// <param name="applicationContext">The database context to be used for accessing the database</param>
     public MusicModule(LavaNode<LavaPlayer, LavaTrack> lavaNode, MusicService musicService, HttpClient httpClient, ApplicationContext applicationContext) {
         _lavaNode = lavaNode;
         _musicService = musicService;

@@ -8,7 +8,7 @@ public class Response {
 
     /// <summary>
     /// The Hero this response belongs to
-    /// 
+    /// </summary>
     public Hero Hero { get; set; }
     
     /// <summary>

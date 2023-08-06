@@ -65,7 +65,7 @@ public class MusicService {
 
         if (args.Player.Track is null && args.Player.PlayerState != PlayerState.Stopped) {
             // If there is no next track, stop the player
-            if (!args.Player.Vueue.TryDequeue(out var nextTrack)) {
+            if (!args.Player.Vueue.TryDequeue(out _)) {
                 await _lavaNode.LeaveAsync(args.Player.VoiceChannel);
                 return;
             }
