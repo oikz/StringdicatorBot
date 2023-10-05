@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 using Discord;
 using Discord.Commands;
@@ -138,13 +139,19 @@ public class CommandHandler {
         }
 
 
-        var message = cachedMessageValue;
-        Console.WriteLine(
-            $"{DateTime.Now}: Message from {message.Author.Username}#{message.Author.DiscriminatorValue} was removed from the channel {cachedChannelValue.Name}: \n"
-            + message.Content);
-        _logFile.WriteLine(
-            $"{DateTime.Now}: Message from {message.Author.Username}#{message.Author.DiscriminatorValue} was removed from the channel {cachedChannelValue.Name}: \n"
-            + message.Content);
+        var deletedMessagesChannel = _discordClient.GetChannel(Convert.ToUInt64(Environment.GetEnvironmentVariable("DELETED_MESSAGE_CHANNEL_ID")));
+        if (deletedMessagesChannel is not null) {
+            var embed = new EmbedBuilder()
+                .WithTitle($"Message Deleted in #{cachedChannelValue.Name}/{(cachedChannelValue as SocketGuildChannel)?.Guild.Name}")
+                .WithDescription(cachedMessageValue.Content)
+                .WithTimestamp(DateTime.Now)
+                .WithImageUrl(cachedMessageValue.Attachments.FirstOrDefault()?.Url)
+                .WithAuthor(cachedMessageValue.Author)
+                .WithColor(3447003)
+                .Build();
+            
+            await ((ISocketMessageChannel) deletedMessagesChannel).SendMessageAsync(embed: embed);
+        }
     }
 
     /// <summary>
@@ -162,15 +169,25 @@ public class CommandHandler {
             return;
         }
 
-        // Ignore messages if they are the same thing
+        // Ignore messages if they are the same thing (occurs when images are embedded)
         if (cachedMessageValue.Content.Equals(newMessage.Content)) {
             return;
         }
-
-        Console.WriteLine(
-            $"{DateTime.Now}: Message from {cachedMessageValue.Author.Username}#{cachedMessageValue.Author.DiscriminatorValue} in {channel.Name} was edited from {cachedMessageValue} -> {newMessage}");
-        await _logFile.WriteLineAsync(
-            $"{DateTime.Now}: Message from {cachedMessageValue.Author.Username}#{cachedMessageValue.Author.DiscriminatorValue} in {channel.Name} was edited from {cachedMessageValue} -> {newMessage}");
+        
+        
+        var deletedMessagesChannel = _discordClient.GetChannel(Convert.ToUInt64(Environment.GetEnvironmentVariable("DELETED_MESSAGE_CHANNEL_ID")));
+        if (deletedMessagesChannel is not null) {
+            var embed = new EmbedBuilder()
+                .WithTitle($"Message Edited in #{channel.Name}/{(channel as SocketGuildChannel)?.Guild.Name}")
+                .WithDescription($"From:\n {cachedMessageValue.Content}\n To:\n {newMessage.Content}")
+                .WithTimestamp(DateTime.Now)
+                .WithImageUrl(cachedMessageValue.Attachments.FirstOrDefault()?.Url)
+                .WithAuthor(newMessage.Author)
+                .WithColor(3447003)
+                .Build();
+            
+            await ((ISocketMessageChannel) deletedMessagesChannel).SendMessageAsync(embed: embed);
+        }
     }
 
 
