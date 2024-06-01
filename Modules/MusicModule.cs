@@ -234,14 +234,14 @@ public class MusicModule : InteractionModuleBase<SocketInteractionContext> {
 
             await EmbedText($"{searchResponse.Tracks.Count - index} tracks added to queue", true,
                 searchResponse.Playlist.Name,
-                null, /*await searchResponse.Tracks.ElementAt(index).FetchArtworkAsync(),*/
+                await searchResponse.Tracks.ElementAt(index).FetchArtworkAsync(),
                 true);
         } else {
             //Single track queueing
             var track = searchResponse.Tracks.ElementAt(0);
             player.GetQueue().Enqueue(track);
             await EmbedText($"{track.Title}", true, TrimTime(track.Duration.ToString(@"dd\:hh\:mm\:ss")),
-                null, /*await track.FetchArtworkAsync(),*/ true);
+                await track.FetchArtworkAsync(), true);
         }
 
         foreach (var item in test) {
@@ -269,22 +269,22 @@ public class MusicModule : InteractionModuleBase<SocketInteractionContext> {
                     await player.SeekAsync(_lavaNode, timestamp2);
                     await EmbedText($"Now Playing: {track.Title}", true,
                         "Duration: " + TrimTime(track.Duration.ToString(@"dd\:hh\:mm\:ss")),
-                        null, /*await track.FetchArtworkAsync(),*/ true);
+                        await track.FetchArtworkAsync(), true);
                 } else {
                     player.GetQueue().Enqueue(searchResponse.Tracks.ElementAt(i));
                 }
             }
 
             await EmbedText($"{searchResponse.Tracks.Count - index} tracks added to queue", true,
-                searchResponse.Playlist.Name, null, //await searchResponse.Tracks.ElementAt(index).FetchArtworkAsync(),
+                searchResponse.Playlist.Name, await searchResponse.Tracks.ElementAt(index).FetchArtworkAsync(),
                 true);
         } else {
             //Single Track queueing
             await player.PlayAsync(_lavaNode, track);
             await player.SeekAsync(_lavaNode, timestamp2);
             await EmbedText($"Now Playing: {track.Title}", true,
-                "Duration: " + TrimTime(track.Duration.ToString(@"dd\:hh\:mm\:ss"))
-                /*await track.FetchArtworkAsync()*/);
+                "Duration: " + TrimTime(track.Duration.ToString(@"dd\:hh\:mm\:ss")),
+                await track.FetchArtworkAsync());
         }
     }
 
@@ -308,8 +308,8 @@ public class MusicModule : InteractionModuleBase<SocketInteractionContext> {
                 return;
             }
 
-            await EmbedText("Track Skipped: ", false, player.GetQueue().ElementAt(index - 1).Title
-                /*await player.GetQueue().ElementAt(index - 1).FetchArtworkAsync()*/);
+            await EmbedText("Track Skipped: ", false, player.GetQueue().ElementAt(index - 1).Title,
+                await player.GetQueue().ElementAt(index - 1).FetchArtworkAsync());
             player.GetQueue().RemoveAt(index - 1);
             return;
         }
@@ -320,7 +320,7 @@ public class MusicModule : InteractionModuleBase<SocketInteractionContext> {
         builder.WithDescription(player.Track.Title);
 
         if (player.GetQueue().Count > 0) {
-            //builder.WithThumbnailUrl(await player.GetQueue().ElementAt(0).FetchArtworkAsync());
+            builder.WithThumbnailUrl(await player.GetQueue().ElementAt(0).FetchArtworkAsync());
             builder.AddField(new EmbedFieldBuilder {
                 Name = "Now Playing: ",
                 Value = player.GetQueue().ElementAt(0).Title
@@ -412,8 +412,8 @@ public class MusicModule : InteractionModuleBase<SocketInteractionContext> {
 
         await EmbedText("Now Playing: ", true, $"[{player.Track.Title}]({player.Track.Url})" +
                                                $"\n {TrimTime(player.Track.Position.ToString(@"dd\:hh\:mm\:ss"))} / " +
-                                               $"{TrimTime(player.Track.Duration.ToString(@"dd\:hh\:mm\:ss"))}"
-            /*await player.Track.FetchArtworkAsync()*/);
+                                               $"{TrimTime(player.Track.Duration.ToString(@"dd\:hh\:mm\:ss"))}",
+            await player.Track.FetchArtworkAsync());
     }
 
 
@@ -448,7 +448,7 @@ public class MusicModule : InteractionModuleBase<SocketInteractionContext> {
         //Create an embed using that image url
         var builder = new EmbedBuilder();
         builder.WithTitle($"String Music Queue - Length: {player.GetQueue().Count}");
-        //builder.WithThumbnailUrl(await player.Track.FetchArtworkAsync());
+        builder.WithThumbnailUrl(await player.Track.FetchArtworkAsync());
         builder.WithColor(3447003);
         builder.WithDescription("");
 
