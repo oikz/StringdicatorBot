@@ -14,11 +14,8 @@ namespace Stringdicator.Util;
 /// Responses 
 /// </summary>
 public static class ResponseUtils {
-    private const string Categoryurl = "https://dota2.fandom.com/api.php?action=query&format=json&list=categorymembers&cmlimit=max&cmprop=title&cmtitle=Category:Responses";
-    private const string Responseurl = "https://dota2.fandom.com/wiki/";
-    private record CategoriesResponse(CategoriesQuery Query);
-    private record CategoriesQuery(List<MemberResponse> Categorymembers);
-    private record MemberResponse(string Title);
+    private const string TemplateResponsesUrl = "https://liquipedia.net/dota2game/Template:VoiceNavSidebar";
+    private const string Responseurl = "https://liquipedia.net/dota2game/";
 
     /// <summary>
     /// Refresh the Heroes and Responses by using the Dota 2 Wiki
@@ -30,25 +27,20 @@ public static class ResponseUtils {
         var heroes = await GetHeroes(httpClient);
         // For each hero, get the responses from the page by scraping and parsing it
         foreach (var hero in heroes) {
-            var responses = await GetResponses(httpClient, hero);
-            var dbResponses = applicationContext.Responses.Where(response => response.Hero.Equals(hero));
-            foreach (var response in responses.Where(response => !dbResponses.Any(dbResponse => dbResponse.Id.Equals(response.Id)))) {
+            var dbHero = await applicationContext.Heroes.FindAsync(hero.Name);
+            dbHero ??= applicationContext.Heroes.Add(hero).Entity;
+
+            var responses = await GetResponses(httpClient, dbHero);
+            var dbResponses = applicationContext.Responses.Where(response => response.Hero.Equals(dbHero));
+            foreach (var response in responses.Where(response =>
+                         !dbResponses.Any(dbResponse => dbResponse.Id.Equals(response.Id)))) {
                 applicationContext.Responses.Add(response);
             }
 
             await applicationContext.SaveChangesAsync();
 
-            dbResponses = applicationContext.Responses.Where(response => response.Hero.Equals(hero));
-            var dbHero = await applicationContext.Heroes.FindAsync(hero.Name);
-            if (dbHero is null) {
-                // Save new hero object
-                hero.Responses = dbResponses.ToList();
-                applicationContext.Heroes.Add(hero);
-            } else {
-                // Update existing hero in database
-                dbHero.Responses = dbResponses.ToList();
-                applicationContext.Heroes.Update(dbHero);
-            }
+            dbResponses = applicationContext.Responses.Where(response => response.Hero.Equals(dbHero));
+            dbHero.Responses = dbResponses.ToList();
 
             await applicationContext.SaveChangesAsync();
         }
@@ -61,13 +53,16 @@ public static class ResponseUtils {
     /// <returns></returns>
     private static async Task<List<Hero>> GetHeroes(HttpClient httpClient) {
         // Send request to get all of the available heroes/responses
-        var response = await httpClient.GetAsync(Categoryurl);
+        var response = await httpClient.GetAsync(TemplateResponsesUrl);
         var responseString = await response.Content.ReadAsStringAsync();
 
-        // Parse the response to get the list of heroes
-        var categories = JsonSerializer.Deserialize<CategoriesResponse>(responseString);
-        var titles = categories.Query.Categorymembers.Select(hero => hero.Title).ToList();
-
+        // Find the table on the page
+        var doc = new HtmlDocument();
+        doc.LoadHtml(responseString);
+        // find all the links in the page that end with /responses
+        var links = doc.DocumentNode.SelectNodes("//a[contains(@href, '/Responses')]");
+        var titles = links.Select(link => link.GetAttributeValue("title", "")).ToList();
+        
         // Return new Hero objects with empty responses lists and ids
         return titles.Select(hero => new Hero {
             Name = hero.Replace("/Responses", ""),
@@ -95,7 +90,7 @@ public static class ResponseUtils {
         // For each li element, find the first audio element and get its source src
         var i = 0;
         foreach (var element in liElements) {
-            if (!element.Contains("<audio hidden=\"\" class=\"ext-audiobutton\" data-volume=\"1.0\">")) continue;
+            if (!element.Contains("<audio hidden=\"\" class=\"ext-audiobutton\"")) continue;
             var audioElement = element.Split("<audio")[1];
             var src = audioElement.Split("src=\"")[1].Split("\"")[0];
 
@@ -103,7 +98,7 @@ public static class ResponseUtils {
             var doc = new HtmlDocument();
             doc.LoadHtml(element);
             var responseText = doc.DocumentNode.GetDirectInnerText().Replace("\n", "").Remove(0, 1).Trim();
-            
+
             // Create a new Response object with the src as the URL
             responses.Add(new Response {
                 Id = hero.Name + i, // Unique Id for tracking later
@@ -135,7 +130,7 @@ public static class ResponseUtils {
             query + "...!",
             query + "..."
         };
-        
+
         // For each query, check if it exists in the database and return the first one that does
         return queries
             .Select(q => applicationContext.Responses.Include(x => x.Hero)
