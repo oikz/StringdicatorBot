@@ -61,7 +61,7 @@ public class MusicModule : InteractionModuleBase<SocketInteractionContext> {
 
         //Get the users voiceState
         var voiceState = Context.User as IVoiceState;
-        
+
         //Try to join the channel
         await _lavaNode.JoinAsync(voiceState?.VoiceChannel);
         _musicService.TextChannels.Add(voiceState.VoiceChannel.GuildId, Context.Channel as ITextChannel); // need to delay this somehow
@@ -127,7 +127,7 @@ public class MusicModule : InteractionModuleBase<SocketInteractionContext> {
 
         // Add YouTube Search to the search query
         searchQuery = "ytsearch:" + searchQuery;
-        
+
         //Find the search result from the search terms
         var searchResponse = await _lavaNode.LoadTrackAsync(searchQuery);
 
@@ -186,7 +186,7 @@ public class MusicModule : InteractionModuleBase<SocketInteractionContext> {
         }
 
         searchQuery = "ytsearch:" + searchQuery;
-        
+
         //Find the search result from the search terms
         //var searchResponse = await _lavaNode.SearchAsync(searchType, searchQuery);
         var searchResponse = await _lavaNode.LoadTrackAsync(searchQuery);
@@ -309,8 +309,8 @@ public class MusicModule : InteractionModuleBase<SocketInteractionContext> {
             player.GetQueue().RemoveAt(index - 1);
             return;
         }
-        
-        
+
+
         var builder = new EmbedBuilder();
         builder.WithTitle("Track Skipped: ");
         builder.WithDescription(player.Track.Title);
@@ -341,7 +341,7 @@ public class MusicModule : InteractionModuleBase<SocketInteractionContext> {
         if (!UserInVoice().Result || !BotInVoice().Result) {
             return;
         }
-        
+
         await DeferAsync();
 
         var player = await _lavaNode.GetPlayerAsync(Context.Guild.Id);
@@ -551,7 +551,7 @@ public class MusicModule : InteractionModuleBase<SocketInteractionContext> {
     /// <returns>A Task with result true if the user is in a channel</returns>
     private async Task<bool> UserInVoice() {
         var voiceState = Context.User as IVoiceState;
-        
+
         if (voiceState?.VoiceChannel != null) return true;
         await RespondAsync("You are not in a voice channel", ephemeral: true);
         return false;
@@ -652,11 +652,8 @@ public class MusicModule : InteractionModuleBase<SocketInteractionContext> {
 
         // If there is a track currently playing, pause it and store it temporarily
         var currentTrack = player.Track;
-        if (currentTrack != null) {
-            await player.PauseAsync(_lavaNode);
-        }
 
-        await player.PlayAsync(_lavaNode, track.Tracks.ElementAt(0));
+        await player.PlayAsync(_lavaNode, track.Tracks.ElementAt(0), noReplace: false);
         _musicService.Requeue = backup;
         _musicService.RequeueCurrentTrack = currentTrack;
     }

@@ -74,7 +74,7 @@ public class MusicService {
 
         if (player.Track is null) {
             // If there is no next track, stop the player
-            if (player.GetQueue().Count == 0) {
+            if (player.GetQueue().Count == 0 && RequeueCurrentTrack is null && Requeue?.Count == 0) {
                 await _lavaNode.LeaveAsync(VoiceChannels[player.GuildId]);
                 VoiceChannels.Remove(player.GuildId);
                 TextChannels.Remove(player.GuildId);
@@ -88,14 +88,14 @@ public class MusicService {
                 await player.PlayAsync(_lavaNode, RequeueCurrentTrack);
                 await player.SeekAsync(_lavaNode, RequeueCurrentTrack.Position);
                 RequeueCurrentTrack = null;
-            }
 
-            if (Requeue?.Count > 0) {
+                if (!(Requeue?.Count > 0)) return;
                 foreach (var item in Requeue) {
                     player.GetQueue().Enqueue(item);
                 }
 
-                Requeue = new List<LavaTrack>();
+                Requeue = [];
+
                 return;
             }
 
@@ -139,7 +139,7 @@ public class MusicService {
             //ThumbnailUrl = await queueable.FetchArtworkAsync(),
             Color = new Color(3447003)
         };
-        
+
         //Output now playing message
         await TextChannels[player.GuildId].SendMessageAsync("", false, builder.Build());
     }
