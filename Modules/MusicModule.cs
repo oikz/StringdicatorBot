@@ -227,7 +227,7 @@ public class MusicModule : InteractionModuleBase<SocketInteractionContext> {
         }
 
         //Playlist queueing
-        if (searchResponse.Tracks.Count > 1) {
+        if (searchResponse.Type == SearchType.Playlist) {
             for (var i = index; i < searchResponse.Tracks.Count; i++) {
                 player.GetQueue().Enqueue(searchResponse.Tracks.ElementAt(i));
             }
@@ -262,7 +262,7 @@ public class MusicModule : InteractionModuleBase<SocketInteractionContext> {
         var track = searchResponse.Tracks.ElementAt(index);
 
         //Play list queueing
-        if (searchResponse.Tracks.Count > 1) {
+        if (searchResponse.Type == SearchType.Playlist) {
             for (var i = index; i < searchResponse.Tracks.Count; i++) {
                 if (i == 0 || i == index) {
                     await player.PlayAsync(_lavaNode, track);

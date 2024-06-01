@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Discord;
 using Discord.WebSocket;
 using Stringdicator.Modules;
+using Stringdicator.Util;
 using Victoria;
 using Victoria.Enums;
 using Victoria.WebSocket.EventArgs;
@@ -112,11 +113,10 @@ public class MusicService {
         }
 
         //If there are no other users in the voice channel, leave
-        var voiceChannelUsers = (VoiceChannels[player.GuildId] as SocketVoiceChannel)?.Users
+        var voiceChannelUsers = (VoiceChannels[player.GuildId] as SocketVoiceChannel)?.ConnectedUsers
             .Where(x => !x.IsBot)
             .ToArray();
-        if (!(voiceChannelUsers ?? Array.Empty<SocketGuildUser>()).Any()) {
-            // Doesn't leave when it finishes
+        if ((voiceChannelUsers ?? []).Length == 0) {
             await _lavaNode.LeaveAsync(VoiceChannels[player.GuildId]);
             VoiceChannels.Remove(player.GuildId);
             TextChannels.Remove(player.GuildId);
@@ -136,7 +136,7 @@ public class MusicService {
             Description = $"[{queueable.Title}]({queueable.Url})" +
                           $"\n {MusicModule.TrimTime(queueable.Position.ToString(@"dd\:hh\:mm\:ss"))} / " +
                           $"{MusicModule.TrimTime(queueable.Duration.ToString(@"dd\:hh\:mm\:ss"))}",
-            //ThumbnailUrl = await queueable.FetchArtworkAsync(),
+            ThumbnailUrl = await queueable.FetchArtworkAsync(),
             Color = new Color(3447003)
         };
 
