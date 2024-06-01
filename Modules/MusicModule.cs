@@ -64,8 +64,8 @@ public class MusicModule : InteractionModuleBase<SocketInteractionContext> {
 
         //Try to join the channel
         await _lavaNode.JoinAsync(voiceState?.VoiceChannel);
-        _musicService.TextChannels.Add(voiceState.VoiceChannel.GuildId, Context.Channel as ITextChannel); // need to delay this somehow
-        _musicService.VoiceChannels.Add(voiceState.VoiceChannel.GuildId, voiceState?.VoiceChannel);
+        _musicService.TextChannels.TryAdd(voiceState.VoiceChannel.GuildId, Context.Channel as ITextChannel);
+        _musicService.VoiceChannels.TryAdd(voiceState.VoiceChannel.GuildId, voiceState?.VoiceChannel);
     }
 
     /// <summary>
@@ -126,7 +126,9 @@ public class MusicModule : InteractionModuleBase<SocketInteractionContext> {
         var timestamp = TimeSpan.FromSeconds(Convert.ToDouble(timestampString));
 
         // Add YouTube Search to the search query
-        searchQuery = "ytsearch:" + searchQuery;
+        if (!searchQuery.Contains("youtube.com")) {
+            searchQuery = "ytsearch:" + searchQuery;
+        }
 
         //Find the search result from the search terms
         var searchResponse = await _lavaNode.LoadTrackAsync(searchQuery);
@@ -139,7 +141,7 @@ public class MusicModule : InteractionModuleBase<SocketInteractionContext> {
             }
         }
 
-        if (searchResponse.Exception.Message is not null) {
+        if (searchResponse.Type is SearchType.Error or SearchType.Error) {
             await EmbedText($"I wasn't able to find anything for `{searchQuery}`.", false);
             return;
         }
@@ -185,7 +187,9 @@ public class MusicModule : InteractionModuleBase<SocketInteractionContext> {
             index = Convert.ToInt32(searchQuery.Split("&index=")[1]) - 1;
         }
 
-        searchQuery = "ytsearch:" + searchQuery;
+        if (searchQuery.Contains("youtube.com")) {
+            searchQuery = "ytsearch:" + searchQuery;
+        }
 
         //Find the search result from the search terms
         //var searchResponse = await _lavaNode.SearchAsync(searchType, searchQuery);
@@ -198,7 +202,7 @@ public class MusicModule : InteractionModuleBase<SocketInteractionContext> {
             }
         }
 
-        if (searchResponse.Exception.Message is not null) {
+        if (searchResponse.Type is SearchType.Error or SearchType.Error) {
             await EmbedText($"I wasn't able to find anything for `{searchQuery}`.", false);
             return;
         }
@@ -223,7 +227,7 @@ public class MusicModule : InteractionModuleBase<SocketInteractionContext> {
         }
 
         //Playlist queueing
-        if (!string.IsNullOrWhiteSpace(searchResponse.Playlist.Name)) {
+        if (searchResponse.Tracks.Count > 1) {
             for (var i = index; i < searchResponse.Tracks.Count; i++) {
                 player.GetQueue().Enqueue(searchResponse.Tracks.ElementAt(i));
             }
@@ -258,7 +262,7 @@ public class MusicModule : InteractionModuleBase<SocketInteractionContext> {
         var track = searchResponse.Tracks.ElementAt(index);
 
         //Play list queueing
-        if (!string.IsNullOrWhiteSpace(searchResponse.Playlist.Name)) {
+        if (searchResponse.Tracks.Count > 1) {
             for (var i = index; i < searchResponse.Tracks.Count; i++) {
                 if (i == 0 || i == index) {
                     await player.PlayAsync(_lavaNode, track);
