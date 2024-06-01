@@ -13,8 +13,7 @@ using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
 using Stringdicator.Database;
 using Stringdicator.Modules;
-using Victoria.Node;
-using Victoria.Player;
+using Victoria;
 
 namespace Stringdicator; 
 
@@ -27,7 +26,7 @@ public class CommandHandler {
     private readonly InteractionService _interactions;
     private StreamWriter _logFile;
     private readonly IServiceProvider _services;
-    private readonly LavaNode<LavaPlayer, LavaTrack> _lavaNode;
+    private readonly LavaNode<LavaPlayer<LavaTrack>, LavaTrack> _lavaNode;
     private readonly HttpClient _httpClient;
     private readonly ApplicationContext _applicationContext;
 
@@ -40,7 +39,7 @@ public class CommandHandler {
         _services = services;
         _discordClient = _services.GetRequiredService<DiscordSocketClient>();
         _interactions = _services.GetRequiredService<InteractionService>();
-        _lavaNode = _services.GetRequiredService<LavaNode<LavaPlayer, LavaTrack>>();
+        _lavaNode = _services.GetRequiredService<LavaNode<LavaPlayer<LavaTrack>, LavaTrack>>();
         _httpClient = _services.GetRequiredService<HttpClient>();
         _applicationContext = _services.GetRequiredService<ApplicationContext>();
     }
@@ -128,7 +127,7 @@ public class CommandHandler {
     private async Task HandleMessageDelete(Cacheable<IMessage, ulong> cachedMessage, Cacheable<IMessageChannel, ulong> channel) {
         var cachedMessageValue = await cachedMessage.GetOrDownloadAsync();
         var cachedChannelValue = await channel.GetOrDownloadAsync();
-
+        
         if (cachedChannelValue is null) {
             return;
         }
@@ -214,7 +213,7 @@ public class CommandHandler {
     private async Task HandleReady() {
         Console.WriteLine("Stringdicator is connected!");
         if (!_lavaNode.IsConnected) {
-            await _lavaNode.ConnectAsync();
+            await _services.UseLavaNodeAsync();
         }
 
         try {

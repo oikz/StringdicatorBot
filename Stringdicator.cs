@@ -10,7 +10,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Stringdicator.Database;
 using Stringdicator.Services;
 using Victoria;
-using Victoria.Player;
 
 namespace Stringdicator; 
 
@@ -64,13 +63,13 @@ class Stringdicator {
 
         //Create the ServiceProvider for dependency injection
         var services = new ServiceCollection()
+            .AddLavaNode()
             .AddSingleton(_discordClient)
             .AddSingleton(_interactions)
             .AddSingleton(_httpClient)
             .AddLogging()
             .AddSingleton<CommandHandler>()
             .AddSingleton<MusicService>()
-            .AddLavaNode<LavaPlayer, LavaTrack>(x => { x.SelfDeaf = false; })
             .AddSingleton<ApplicationContext>()
             .AddSingleton<ImageSearchCacheService>()
             .BuildServiceProvider();

@@ -6,27 +6,28 @@ using Discord;
 using Discord.WebSocket;
 using Stringdicator.Modules;
 using Victoria;
-using Victoria.Node;
-using Victoria.Node.EventArgs;
-using Victoria.Player;
+using Victoria.Enums;
+using Victoria.WebSocket.EventArgs;
 
-namespace Stringdicator.Services; 
+namespace Stringdicator.Services;
 
 /// <summary>
-/// Music service for handling all of the events coming from audio playback in one place
+/// Music service for handling all the events coming from audio playback in one place
 /// </summary>
 public class MusicService {
-    private readonly LavaNode<LavaPlayer, LavaTrack> _lavaNode;
+    private readonly LavaNode<LavaPlayer<LavaTrack>, LavaTrack> _lavaNode;
     public LavaTrack RequeueCurrentTrack { get; set; }
     public List<LavaTrack> Requeue { get; set; }
-    private List<LavaPlayer> RepeatPlayer { get; } = new();
+    private List<LavaPlayer<LavaTrack>> RepeatPlayer { get; } = [];
+    public Dictionary<ulong, IVoiceChannel> VoiceChannels { get; } = new();
+    public Dictionary<ulong, ITextChannel> TextChannels { get; } = new();
 
     /// <summary>
     /// Constructor for music module to retrieve the lavaNode in use
     /// Uses the lavaNode for retrieving/managing/playing audio to voice channels
     /// </summary>
     /// <param name="lavaNode">The lavaNode to be used for audio playback</param>
-    public MusicService(LavaNode<LavaPlayer, LavaTrack> lavaNode) {
+    public MusicService(LavaNode<LavaPlayer<LavaTrack>, LavaTrack> lavaNode) {
         _lavaNode = lavaNode;
         _lavaNode.OnTrackEnd += OnTrackEnd;
         _lavaNode.OnTrackException += OnTrackException;
@@ -38,148 +39,182 @@ public class MusicService {
     /// Obtained mostly from the Victoria Tutorial pages
     /// </summary>
     /// <param name="args">The information about the track that has ended</param>
-    private async Task OnTrackEnd(TrackEndEventArg<LavaPlayer, LavaTrack> args) {
+    private async Task OnTrackEnd(TrackEndEventArg args) {
         await Task.Delay(1000);
-        if (args.Reason == TrackEndReason.LoadFailed) {
+        var player = await _lavaNode.GetPlayerAsync(args.GuildId);
+        if (args.Reason == TrackEndReason.Load_Failed) {
             // If there is no next track, stop the player
-            if (!args.Player.Vueue.Any()) {
-                await _lavaNode.LeaveAsync(args.Player.VoiceChannel);
+
+            if (player.GetQueue().Count == 0) {
+                await _lavaNode.LeaveAsync(VoiceChannels[player.GuildId]);
+                VoiceChannels.Remove(player.GuildId);
+                TextChannels.Remove(player.GuildId);
                 return;
             }
-            await args.Player.SkipAsync();
+
+            await player.SkipAsync(_lavaNode);
         }
-            
+
         if (args.Reason != TrackEndReason.Finished) {
             return;
         }
-            
-        if (RepeatPlayer.Contains(args.Player)) {
+
+        if (RepeatPlayer.Contains(player)) {
             // Put the current track on the top of the queue
-            var tempQueue = args.Player.Vueue;
-            args.Player.Vueue.Clear();
-            await args.Player.PlayAsync(args.Track);
-            args.Player.Vueue.Enqueue(tempQueue);
+            var tempQueue = player.GetQueue();
+            player.GetQueue().Clear();
+            await player.PlayAsync(_lavaNode, args.Track);
+            foreach (var item in tempQueue) {
+                player.GetQueue().Enqueue(item);
+            }
+
             return;
         }
-            
 
-        if (args.Player.Track is null && args.Player.PlayerState != PlayerState.Stopped) {
+
+        if (player.Track is null) {
             // If there is no next track, stop the player
-            if (!args.Player.Vueue.TryDequeue(out _)) {
-                await _lavaNode.LeaveAsync(args.Player.VoiceChannel);
+            if (player.GetQueue().Count == 0) {
+                await _lavaNode.LeaveAsync(VoiceChannels[player.GuildId]);
+                VoiceChannels.Remove(player.GuildId);
+                TextChannels.Remove(player.GuildId);
                 return;
             }
-            await args.Player.SkipAsync();
         }
 
-        //If queue is empty, return
-        var player = args.Player;
-        if (!player.Vueue.TryDequeue(out var queueable)) {
-                
+        if (!player.GetQueue().TryDequeue(out var queueable)) {
             // Restore the previously playing tracks if they were interrupted by a voice line
             if (RequeueCurrentTrack != null) {
-                await player.PlayAsync(RequeueCurrentTrack);
-                await player.SeekAsync(RequeueCurrentTrack.Position);
+                await player.PlayAsync(_lavaNode, RequeueCurrentTrack);
+                await player.SeekAsync(_lavaNode, RequeueCurrentTrack.Position);
                 RequeueCurrentTrack = null;
             }
-            if (Requeue?.Count > 0) {   
-                player.Vueue.Enqueue(Requeue);
+
+            if (Requeue?.Count > 0) {
+                foreach (var item in Requeue) {
+                    player.GetQueue().Enqueue(item);
+                }
+
                 Requeue = new List<LavaTrack>();
                 return;
             }
-                
-            await _lavaNode.LeaveAsync(player.VoiceChannel);
+
+            await _lavaNode.LeaveAsync(VoiceChannels[player.GuildId]);
+            VoiceChannels.Remove(player.GuildId);
+            TextChannels.Remove(player.GuildId);
             return;
         }
 
         //General Error case for queue
         if (queueable == null) {
-            await player.TextChannel.SendMessageAsync("Next item in queue is not a track.");
+            await TextChannels[player.GuildId].SendMessageAsync("Next item in queue is not a track."); // TODO PAIN
             return;
         }
 
         //If there are no other users in the voice channel, leave
-        var voiceChannelUsers = (player.VoiceChannel as SocketVoiceChannel)?.Users
+        var voiceChannelUsers = (VoiceChannels[player.GuildId] as SocketVoiceChannel)?.Users
             .Where(x => !x.IsBot)
             .ToArray();
-        if (!(voiceChannelUsers ?? Array.Empty<SocketGuildUser>()).Any()) { // Doesn't leave when it finishes
-            await _lavaNode.LeaveAsync(player.VoiceChannel);
+        if (!(voiceChannelUsers ?? Array.Empty<SocketGuildUser>()).Any()) {
+            // Doesn't leave when it finishes
+            await _lavaNode.LeaveAsync(VoiceChannels[player.GuildId]);
+            VoiceChannels.Remove(player.GuildId);
+            TextChannels.Remove(player.GuildId);
             return;
         }
 
-        //Play the track and output whats being played
+        //Play the track and output what's being played
         try {
-            await args.Player.PlayAsync(queueable);
-        } catch (Exception e) {
+            await player.PlayAsync(_lavaNode, queueable);
+        }
+        catch (Exception e) {
             Console.WriteLine(e);
         }
 
         var builder = new EmbedBuilder {
             Title = "Now Playing: ",
-            Description = $"[{player.Track.Title}]({player.Track.Url})" +
+            Description = $"[{queueable.Title}]({queueable.Url})" +
                           $"\n {MusicModule.TrimTime(queueable.Position.ToString(@"dd\:hh\:mm\:ss"))} / " +
                           $"{MusicModule.TrimTime(queueable.Duration.ToString(@"dd\:hh\:mm\:ss"))}",
-            ThumbnailUrl = await queueable.FetchArtworkAsync(),
+            //ThumbnailUrl = await queueable.FetchArtworkAsync(),
             Color = new Color(3447003)
         };
+        
         //Output now playing message
-        await player.TextChannel.SendMessageAsync("", false, builder.Build());
+        await TextChannels[player.GuildId].SendMessageAsync("", false, builder.Build());
     }
 
     /// <summary>
     /// The method called when a track has an exception
     /// </summary>
     /// <param name="args">The information about the track that has ended</param>
-    private async Task OnTrackException(TrackExceptionEventArg<LavaPlayer, LavaTrack> args) {
+    private async Task OnTrackException(TrackExceptionEventArg args) {
         var backup = new List<LavaTrack>();
-        if (args.Exception.Message.Contains("This video is not available") || args.Exception.Message.Contains("This video is unavailable")) {
-            backup.AddRange(args.Player.Vueue.RemoveRange(0, args.Player.Vueue.Count));
-            args.Player.Vueue.Clear();
-            args.Player.Vueue.Enqueue(args.Track);
-            args.Player.Vueue.Enqueue(backup);
+        var player = await _lavaNode.GetPlayerAsync(args.GuildId);
+        if (args.Exception.Message.Contains("This video is not available") ||
+            args.Exception.Message.Contains("This video is unavailable")) {
+            backup.AddRange(player.GetQueue().RemoveRange(0, player.GetQueue().Count));
+            player.GetQueue().Clear();
+            player.GetQueue().Enqueue(args.Track);
+            foreach (var item in backup) {
+                player.GetQueue().Enqueue(item);
+            }
+
             return;
         }
-        if (args.Player.Track is null) {
-            if (args.Player.Vueue.Count == 0) {
-                await _lavaNode.LeaveAsync(args.Player.VoiceChannel);
+
+        if (player.Track is null) {
+            if (player.GetQueue().Count == 0) {
+                await _lavaNode.LeaveAsync(VoiceChannels[player.GuildId]);
+                VoiceChannels.Remove(player.GuildId);
+                TextChannels.Remove(player.GuildId);
                 return;
             }
-            await args.Player.SkipAsync();
+
+            await player.SkipAsync(_lavaNode);
             return;
         }
-        backup.AddRange(args.Player.Vueue.RemoveRange(0, args.Player.Vueue.Count));
-        args.Player.Vueue.Clear();
+
+        backup.AddRange(player.GetQueue().RemoveRange(0, player.GetQueue().Count));
+        player.GetQueue().Clear();
         try {
-            await args.Player.PlayAsync(args.Track);
-        } catch (Exception e) {
+            await player.PlayAsync(_lavaNode, args.Track);
+        }
+        catch (Exception e) {
             Console.WriteLine(e);
         }
 
-        args.Player.Vueue.Enqueue(backup);
+        foreach (var item in backup) {
+            player.GetQueue().Enqueue(item);
+        }
     }
 
     /// <summary>
     /// The method called when a track gets stuck
     /// </summary>
     /// <param name="args">The information about the track that has ended</param>
-    private static async Task OnTrackStuck(TrackStuckEventArg<LavaPlayer, LavaTrack> args) {
+    private async Task OnTrackStuck(TrackStuckEventArg args) {
         var test = new List<LavaTrack>();
-        test.AddRange(args.Player.Vueue.RemoveRange(0, args.Player.Vueue.Count));
-        args.Player.Vueue.Clear();
+        var player = await _lavaNode.GetPlayerAsync(args.GuildId);
+        test.AddRange(player.GetQueue().RemoveRange(0, player.GetQueue().Count));
+        player.GetQueue().Clear();
         try {
-            await args.Player.PlayAsync(args.Track);
-        } catch (Exception e) {
+            await player.PlayAsync(_lavaNode, args.Track);
+        }
+        catch (Exception e) {
             Console.WriteLine(e);
         }
 
-        args.Player.Vueue.Enqueue(test);
+        foreach (var item in test) {
+            player.GetQueue().Enqueue(item);
+        }
     }
 
     /// <summary>
     /// Repeat the current track on the current player
     /// </summary>
     /// <param name="player">The LavaPlayer for the server to repeat for</param>
-    public void RepeatTrack(LavaPlayer player) {
+    public void RepeatTrack(LavaPlayer<LavaTrack> player) {
         if (RepeatPlayer.Contains(player)) {
             RepeatPlayer.Remove(player);
         } else {
