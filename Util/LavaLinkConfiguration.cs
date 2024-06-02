@@ -1,4 +1,5 @@
-﻿using Victoria;
+﻿using System;
+using Victoria;
 
 namespace Stringdicator.Util;
 
@@ -7,6 +8,8 @@ namespace Stringdicator.Util;
 /// </summary>
 public record LavaLinkConfiguration : Configuration {
     public LavaLinkConfiguration() {
-        Hostname = "lavalink";
+        Hostname = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT") == "Development"
+            ? "localhost"
+            : "lavalink";
     }
 }
