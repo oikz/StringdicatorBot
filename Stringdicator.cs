@@ -7,11 +7,13 @@ using Discord.Interactions;
 using Discord.WebSocket;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Stringdicator.Database;
 using Stringdicator.Services;
+using Stringdicator.Util;
 using Victoria;
 
-namespace Stringdicator; 
+namespace Stringdicator;
 
 /// <summary>
 /// Main class for the Stringdicator Discord bot
@@ -27,9 +29,10 @@ class Stringdicator {
             LogLevel = LogSeverity.Info,
             MessageCacheSize = 250,
             AlwaysDownloadUsers = true,
-            GatewayIntents = GatewayIntents.AllUnprivileged | GatewayIntents.GuildMembers | GatewayIntents.MessageContent
+            GatewayIntents = GatewayIntents.AllUnprivileged | GatewayIntents.GuildMembers |
+                             GatewayIntents.MessageContent
         });
-            
+
         _interactions = new InteractionService(_discordClient, new InteractionServiceConfig() {
             LogLevel = LogSeverity.Info
         });
@@ -52,12 +55,12 @@ class Stringdicator {
         //Load Token from env file
         var root = Directory.GetCurrentDirectory();
         var configFile = Path.Combine(root, ".env");
-            
+
         if (!File.Exists(configFile)) {
             Console.WriteLine("No .env file found");
             return;
         }
-            
+
         LoadEnvironmentVariables(configFile);
 
 
@@ -72,6 +75,7 @@ class Stringdicator {
             .AddSingleton<MusicService>()
             .AddSingleton<ApplicationContext>()
             .AddSingleton<ImageSearchCacheService>()
+            .Replace(ServiceDescriptor.Singleton<Configuration, LavaLinkConfiguration>())
             .BuildServiceProvider();
 
         //Login
