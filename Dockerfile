@@ -10,7 +10,7 @@ WORKDIR "/src/"
 RUN dotnet build "Stringdicator.csproj" -c Release -o /app/build
 
 FROM build AS publish
-RUN dotnet publish "Stringdicator.csproj" -c Release -o /app/publish /p:UseAppHost=false -r linux-arm64
+RUN dotnet publish "Stringdicator.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
 FROM base AS final
 LABEL org.opencontainers.image.source=https://github.com/oikz/stringdicatorbot
