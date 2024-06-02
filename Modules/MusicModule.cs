@@ -102,6 +102,7 @@ public class MusicModule : InteractionModuleBase<SocketInteractionContext> {
         //Join the voice channel if not already in it
         if (await _lavaNode.TryGetPlayerAsync(Context.Guild.Id) is null) {
             await JoinAsync();
+            await Task.Delay(1000);
         }
 
         //Convert shortened link to full link
@@ -334,7 +335,8 @@ public class MusicModule : InteractionModuleBase<SocketInteractionContext> {
         builder.WithColor(3447003);
         await FollowupAsync(embed: builder.Build());
 
-        await player.SkipAsync(_lavaNode);
+        player.GetQueue().TryDequeue(out var track);
+        await player.PlayAsync(_lavaNode, track, false);
     }
 
     /// <summary>

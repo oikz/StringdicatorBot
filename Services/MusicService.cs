@@ -53,7 +53,8 @@ public class MusicService {
                 return;
             }
 
-            await player.SkipAsync(_lavaNode);
+            player.GetQueue().TryDequeue(out var track);
+            await player.PlayAsync(_lavaNode, track, false);
         }
 
         if (args.Reason != TrackEndReason.Finished) {
@@ -151,8 +152,7 @@ public class MusicService {
     private async Task OnTrackException(TrackExceptionEventArg args) {
         var backup = new List<LavaTrack>();
         var player = await _lavaNode.GetPlayerAsync(args.GuildId);
-        if (args.Exception.Message.Contains("This video is not available") ||
-            args.Exception.Message.Contains("This video is unavailable")) {
+        if (args.Exception.Message?.Contains("This video is not available") ?? args.Exception.Message?.Contains("This video is unavailable") ?? false) {
             backup.AddRange(player.GetQueue().RemoveRange(0, player.GetQueue().Count));
             player.GetQueue().Clear();
             player.GetQueue().Enqueue(args.Track);
@@ -171,7 +171,8 @@ public class MusicService {
                 return;
             }
 
-            await player.SkipAsync(_lavaNode);
+            player.GetQueue().TryDequeue(out var track);
+            await player.PlayAsync(_lavaNode, track, false);
             return;
         }
 
