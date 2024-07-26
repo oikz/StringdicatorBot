@@ -99,10 +99,10 @@ public class MusicModule : InteractionModuleBase<SocketInteractionContext> {
 
         await DeferAsync();
 
-        //Join the voice channel if not already in it
-        if (await _lavaNode.TryGetPlayerAsync(Context.Guild.Id) is null) {
+        var player = await _lavaNode.TryGetPlayerAsync(GetVoiceChannel().Guild.Id);
+        if (player is null || player.State.IsConnected == false) {
             await JoinAsync();
-            await Task.Delay(1000);
+            player = await _lavaNode.GetPlayerAsync(GetVoiceChannel().Guild.Id);
         }
 
         //Convert shortened link to full link
@@ -147,9 +147,6 @@ public class MusicModule : InteractionModuleBase<SocketInteractionContext> {
             return;
         }
 
-        //Get the player and start playing/queueing a single track or playlist
-        var player = await _lavaNode.GetPlayerAsync(Context.Guild.Id);
-
         if (player.GetQueue().Count == 0 && player.Track is null) {
             await PlayNow(searchResponse, player, index, timestamp);
             return;
@@ -171,9 +168,10 @@ public class MusicModule : InteractionModuleBase<SocketInteractionContext> {
 
         await DeferAsync();
 
-        //Join the voice channel if not already in it
-        if (await _lavaNode.TryGetPlayerAsync(Context.Guild.Id) is null) {
+        var player = await _lavaNode.TryGetPlayerAsync(GetVoiceChannel().Guild.Id);
+        if (player is null || player.State.IsConnected == false) {
             await JoinAsync();
+            player = await _lavaNode.GetPlayerAsync(GetVoiceChannel().Guild.Id);
         }
 
         //Convert shortened link to full link
@@ -208,7 +206,6 @@ public class MusicModule : InteractionModuleBase<SocketInteractionContext> {
             return;
         }
 
-        var player = await _lavaNode.GetPlayerAsync(Context.Guild.Id);
         await QueueNow(searchResponse, player, true, index);
     }
 
@@ -577,7 +574,8 @@ public class MusicModule : InteractionModuleBase<SocketInteractionContext> {
     /// </summary>
     /// <returns>True if the bot is currently in a voice channel, false otherwise.</returns>
     private async Task<bool> BotInVoice() {
-        if (await _lavaNode.TryGetPlayerAsync(GetVoiceChannel().Guild.Id) is not null) return true;
+        var player = await _lavaNode.TryGetPlayerAsync(GetVoiceChannel().Guild.Id);
+        if (player is not null && player.State.IsConnected == false) return true;
         await RespondAsync("The bot is not in a voice channel", ephemeral: true);
         return false;
     }
@@ -644,11 +642,12 @@ public class MusicModule : InteractionModuleBase<SocketInteractionContext> {
     /// </summary>
     /// <param name="url">The audio url to play</param>
     private async Task PlayLink(string url) {
-        if (await _lavaNode.TryGetPlayerAsync(GetVoiceChannel().Guild.Id) is null) {
+        var player = await _lavaNode.TryGetPlayerAsync(GetVoiceChannel().Guild.Id);
+        if (player is null || player.State.IsConnected == false) {
             await JoinAsync();
+            player = await _lavaNode.GetPlayerAsync(GetVoiceChannel().Guild.Id);
         }
 
-        var player = await _lavaNode.GetPlayerAsync(GetVoiceChannel().Guild.Id);
         var track = await _lavaNode.LoadTrackAsync(url);
 
         // If there is a queue, store it temporarily and restore afterwards

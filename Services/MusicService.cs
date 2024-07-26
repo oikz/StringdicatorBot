@@ -78,6 +78,7 @@ public class MusicService {
             // If there is no next track, stop the player
             if (player.GetQueue().Count == 0 && RequeueCurrentTrack is null && Requeue?.Count == 0) {
                 await _lavaNode.LeaveAsync(VoiceChannels[player.GuildId]);
+                await _lavaNode.DestroyPlayerAsync(player.GuildId);
                 VoiceChannels.Remove(player.GuildId);
                 TextChannels.Remove(player.GuildId);
                 return;
